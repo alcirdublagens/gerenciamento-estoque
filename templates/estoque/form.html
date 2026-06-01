@@ -1,0 +1,72 @@
+{% extends "base.html" %}
+{% block title %}{{ 'Editar Produto' if produto else 'Novo Produto' }} — Estoque Pro{% endblock %}
+{% block page_title %}{{ 'Editar Produto' if produto else 'Novo Produto' }}{% endblock %}
+{% block content %}
+
+<div class="row justify-content-center">
+    <div class="col-md-9 col-lg-7">
+        <div class="card border-0 shadow-sm">
+            <div class="card-body p-4">
+                <form method="POST">
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">
+                            Nome <span class="text-danger">*</span>
+                        </label>
+                        <input type="text" name="nome" class="form-control" required
+                               value="{{ produto.nome if produto else '' }}"
+                               placeholder="Nome do produto">
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Código</label>
+                        <input type="text" name="codigo" class="form-control"
+                               value="{{ produto.codigo if produto else '' }}"
+                               placeholder="Código de barras, SKU ou referência (opcional)">
+                        <div class="form-text">Deve ser único. Deixe em branco se não tiver.</div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Descrição</label>
+                        <textarea name="descricao" class="form-control" rows="2"
+                                  placeholder="Descrição breve (opcional)">{{ produto.descricao if produto else '' }}</textarea>
+                    </div>
+
+                    <div class="row g-3 mb-4">
+                        <div class="col-sm-4">
+                            <label class="form-label fw-semibold">
+                                Preço (R$) <span class="text-danger">*</span>
+                            </label>
+                            <input type="number" name="preco" class="form-control"
+                                   step="0.01" min="0" required
+                                   value="{{ '%.2f'|format(produto.preco) if produto else '0.00' }}">
+                        </div>
+                        <div class="col-sm-4">
+                            <label class="form-label fw-semibold">Quantidade</label>
+                            <input type="number" name="quantidade" class="form-control" min="0"
+                                   value="{{ produto.quantidade if produto else '0' }}">
+                        </div>
+                        <div class="col-sm-4">
+                            <label class="form-label fw-semibold">Estoque Mínimo</label>
+                            <input type="number" name="estoque_minimo" class="form-control" min="0"
+                                   value="{{ produto.estoque_minimo if produto else '5' }}">
+                            <div class="form-text">Alerta quando abaixo deste valor.</div>
+                        </div>
+                    </div>
+
+                    <div class="d-flex gap-2 justify-content-end">
+                        <a href="{{ url_for('estoque.index') }}" class="btn btn-outline-secondary">
+                            Cancelar
+                        </a>
+                        <button type="submit" class="btn text-white fw-semibold"
+                                style="background:#6366f1;">
+                            <i class="bi bi-check-lg me-1"></i>
+                            {{ 'Salvar Alterações' if produto else 'Cadastrar Produto' }}
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}

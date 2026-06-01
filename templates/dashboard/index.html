@@ -1,0 +1,121 @@
+{% extends "base.html" %}
+{% block title %}Dashboard — Estoque Pro{% endblock %}
+{% block page_title %}Dashboard{% endblock %}
+{% block content %}
+
+<div class="row g-3 mb-4">
+    <div class="col-sm-6 col-xl-3">
+        <div class="card border-0 shadow-sm">
+            <div class="card-body d-flex align-items-center gap-3">
+                <div class="rounded-3 p-3" style="background:rgba(99,102,241,.12);">
+                    <i class="bi bi-cart-check" style="font-size:1.5rem;color:#6366f1;"></i>
+                </div>
+                <div>
+                    <p class="text-muted small mb-0">Vendas Hoje</p>
+                    <h4 class="mb-0 fw-bold">{{ qtd_vendas_hoje }}</h4>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-sm-6 col-xl-3">
+        <div class="card border-0 shadow-sm">
+            <div class="card-body d-flex align-items-center gap-3">
+                <div class="rounded-3 p-3 bg-success bg-opacity-10">
+                    <i class="bi bi-currency-dollar text-success" style="font-size:1.5rem;"></i>
+                </div>
+                <div>
+                    <p class="text-muted small mb-0">Faturamento Hoje</p>
+                    <h4 class="mb-0 fw-bold">R$ {{ "%.2f"|format(total_hoje) }}</h4>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-sm-6 col-xl-3">
+        <div class="card border-0 shadow-sm">
+            <div class="card-body d-flex align-items-center gap-3">
+                <div class="rounded-3 p-3 bg-warning bg-opacity-10">
+                    <i class="bi bi-box-seam text-warning" style="font-size:1.5rem;"></i>
+                </div>
+                <div>
+                    <p class="text-muted small mb-0">Produtos Ativos</p>
+                    <h4 class="mb-0 fw-bold">{{ total_produtos }}</h4>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-sm-6 col-xl-3">
+        <div class="card border-0 shadow-sm">
+            <div class="card-body d-flex align-items-center gap-3">
+                <div class="rounded-3 p-3 bg-info bg-opacity-10">
+                    <i class="bi bi-people text-info" style="font-size:1.5rem;"></i>
+                </div>
+                <div>
+                    <p class="text-muted small mb-0">Usuários Ativos</p>
+                    <h4 class="mb-0 fw-bold">{{ total_usuarios }}</h4>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% if produtos_baixo_estoque %}
+<div class="alert alert-warning d-flex align-items-start gap-2 shadow-sm mb-4">
+    <i class="bi bi-exclamation-triangle-fill flex-shrink-0 mt-1"></i>
+    <div>
+        <strong>{{ produtos_baixo_estoque|length }} produto(s) com estoque baixo:</strong>
+        <div class="mt-1 d-flex flex-wrap gap-1">
+            {% for p in produtos_baixo_estoque %}
+                <a href="{{ url_for('estoque.editar', id=p.id) }}"
+                   class="badge bg-warning text-dark text-decoration-none">
+                    {{ p.nome }} ({{ p.quantidade }})
+                </a>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<div class="card border-0 shadow-sm">
+    <div class="card-header bg-white border-bottom py-3">
+        <h6 class="mb-0 fw-semibold">Últimas Vendas</h6>
+    </div>
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th class="ps-3">#</th>
+                        <th>Data / Hora</th>
+                        <th>Vendedor</th>
+                        <th>Itens</th>
+                        <th class="text-end pe-3">Total</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for venda in ultimas_vendas %}
+                    <tr>
+                        <td class="ps-3 text-muted small">{{ venda.id }}</td>
+                        <td>{{ venda.criado_em.strftime('%d/%m/%Y %H:%M') }}</td>
+                        <td>{{ venda.vendedor.nome }}</td>
+                        <td>
+                            <span class="badge bg-secondary bg-opacity-75">{{ venda.itens|length }}</span>
+                        </td>
+                        <td class="text-end pe-3 fw-semibold text-success">
+                            R$ {{ "%.2f"|format(venda.total) }}
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="5" class="text-center text-muted py-5">
+                            <i class="bi bi-receipt d-block mb-2" style="font-size:2rem;"></i>
+                            Nenhuma venda registrada ainda.
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+{% endblock %}

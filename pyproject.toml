@@ -1,8 +1,11 @@
 [project]
-name = "vercel-flask-starter"
+name = "gerenciamento-estoque"
 version = "0.1.0"
 requires-python = ">=3.9"
 dependencies = [
   "flask>=3.1,<4.0",
-  "gunicorn~=23.0.0"
+  "flask-login>=0.6,<1.0",
+  "flask-sqlalchemy>=3.1,<4.0",
+  "gunicorn~=23.0.0",
+  "psycopg2-binary>=2.9"
 ]

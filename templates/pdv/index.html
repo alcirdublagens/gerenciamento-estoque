@@ -1,0 +1,252 @@
+{% extends "base.html" %}
+{% block title %}PDV — Estoque Pro{% endblock %}
+{% block page_title %}Ponto de Venda{% endblock %}
+
+{% block content %}
+<div class="row g-3" style="height: calc(100vh - 130px);">
+
+    <!-- Painel de Produtos -->
+    <div class="col-lg-7 d-flex flex-column" style="min-height:0;">
+        <div class="card border-0 shadow-sm d-flex flex-column flex-grow-1" style="min-height:0;">
+            <div class="card-header bg-white border-bottom py-3">
+                <input type="text" id="buscaProduto" class="form-control"
+                       placeholder="&#xF52A;  Buscar por nome ou código..." autofocus>
+            </div>
+            <div id="listaProdutos" class="card-body overflow-auto p-2">
+                <div class="text-center text-muted py-5" id="dica">
+                    <i class="bi bi-search d-block mb-2" style="font-size:2.5rem;opacity:.4;"></i>
+                    <p class="mb-0">Digite para buscar produtos disponíveis</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Painel do Carrinho -->
+    <div class="col-lg-5 d-flex flex-column" style="min-height:0;">
+        <div class="card border-0 shadow-sm d-flex flex-column flex-grow-1" style="min-height:0;">
+            <div class="card-header bg-white border-bottom py-3 d-flex justify-content-between align-items-center">
+                <h6 class="mb-0 fw-semibold">
+                    <i class="bi bi-cart3 me-2"></i>Carrinho
+                    <span id="qtdItens" class="badge bg-secondary ms-1" style="display:none;">0</span>
+                </h6>
+                <button class="btn btn-sm btn-outline-danger" onclick="limparCarrinho()">
+                    <i class="bi bi-trash me-1"></i> Limpar
+                </button>
+            </div>
+
+            <div class="card-body p-0 overflow-auto flex-grow-1" style="min-height:0;">
+                <div id="carrinhoVazio" class="text-center text-muted py-5">
+                    <i class="bi bi-cart-x d-block mb-2" style="font-size:2.5rem;opacity:.4;"></i>
+                    <p class="mb-0">Carrinho vazio</p>
+                </div>
+                <div id="itensCarrinho"></div>
+            </div>
+
+            <div class="card-footer bg-white py-3">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <span class="text-muted fw-semibold">Total</span>
+                    <h4 class="mb-0 fw-bold text-success" id="totalCarrinho">R$ 0,00</h4>
+                </div>
+                <button class="btn btn-success w-100 fw-semibold py-2"
+                        id="btnFinalizar" onclick="finalizarVenda()" disabled>
+                    <i class="bi bi-check-circle me-2"></i> Finalizar Venda
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Confirmação -->
+<div class="modal fade" id="modalSucesso" tabindex="-1" data-bs-backdrop="static">
+    <div class="modal-dialog modal-sm modal-dialog-centered">
+        <div class="modal-content border-0 shadow">
+            <div class="modal-body text-center py-4 px-4">
+                <div class="bg-success bg-opacity-10 rounded-circle d-inline-flex align-items-center justify-content-center mb-3"
+                     style="width:64px;height:64px;">
+                    <i class="bi bi-check-circle-fill text-success" style="font-size:2rem;"></i>
+                </div>
+                <h5 class="fw-bold mb-1">Venda Registrada!</h5>
+                <p class="text-muted small" id="msgSucesso"></p>
+                <button class="btn text-white w-100 fw-semibold mt-1"
+                        style="background:#6366f1;"
+                        data-bs-dismiss="modal" onclick="limparCarrinho()">
+                    <i class="bi bi-plus-lg me-1"></i> Nova Venda
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+const carrinho = new Map(); // produto_id → {nome, preco, quantidade, max}
+let debounce;
+
+document.getElementById('buscaProduto').addEventListener('input', function () {
+    clearTimeout(debounce);
+    debounce = setTimeout(() => buscarProdutos(this.value.trim()), 280);
+});
+
+async function buscarProdutos(termo) {
+    if (!termo) {
+        document.getElementById('listaProdutos').innerHTML =
+            document.getElementById('dica').outerHTML;
+        return;
+    }
+    const res = await fetch('/pdv/produtos?q=' + encodeURIComponent(termo));
+    const produtos = await res.json();
+
+    if (!produtos.length) {
+        document.getElementById('listaProdutos').innerHTML =
+            '<div class="text-center text-muted py-5">Nenhum produto encontrado.</div>';
+        return;
+    }
+
+    document.getElementById('listaProdutos').innerHTML = produtos.map(p => `
+        <div class="d-flex align-items-center p-2 border-bottom item-produto"
+             style="cursor:pointer;" onclick="adicionar(${p.id}, ${JSON.stringify(p.nome)}, ${p.preco}, ${p.quantidade})">
+            <div class="flex-grow-1 me-2">
+                <div class="fw-semibold small">${escHtml(p.nome)}</div>
+                <div class="text-muted" style="font-size:.75rem;">
+                    ${p.codigo ? escHtml(p.codigo) + ' &bull; ' : ''}
+                    Estoque: <strong>${p.quantidade}</strong>
+                </div>
+            </div>
+            <div class="text-end">
+                <div class="fw-bold text-primary small">R$ ${fmtBrl(p.preco)}</div>
+                <button class="btn btn-sm mt-1 text-white" style="background:#6366f1;font-size:.75rem;">
+                    <i class="bi bi-plus"></i> Add
+                </button>
+            </div>
+        </div>
+    `).join('');
+}
+
+function adicionar(id, nome, preco, max) {
+    if (carrinho.has(id)) {
+        const item = carrinho.get(id);
+        if (item.quantidade >= max) { alert('Estoque insuficiente!'); return; }
+        item.quantidade++;
+    } else {
+        carrinho.set(id, { nome, preco, quantidade: 1, max });
+    }
+    renderCarrinho();
+}
+
+function remover(id) {
+    carrinho.delete(id);
+    renderCarrinho();
+}
+
+function alterarQtd(id, delta) {
+    const item = carrinho.get(id);
+    if (!item) return;
+    item.quantidade += delta;
+    if (item.quantidade <= 0) carrinho.delete(id);
+    else if (item.quantidade > item.max) item.quantidade = item.max;
+    renderCarrinho();
+}
+
+function limparCarrinho() {
+    carrinho.clear();
+    renderCarrinho();
+}
+
+function renderCarrinho() {
+    const vazio = document.getElementById('carrinhoVazio');
+    const itensEl = document.getElementById('itensCarrinho');
+    const btnFinalizar = document.getElementById('btnFinalizar');
+    const qtdBadge = document.getElementById('qtdItens');
+
+    if (!carrinho.size) {
+        vazio.style.display = 'block';
+        itensEl.innerHTML = '';
+        document.getElementById('totalCarrinho').textContent = 'R$ 0,00';
+        btnFinalizar.disabled = true;
+        qtdBadge.style.display = 'none';
+        return;
+    }
+
+    vazio.style.display = 'none';
+    btnFinalizar.disabled = false;
+    qtdBadge.style.display = '';
+    qtdBadge.textContent = carrinho.size;
+
+    let total = 0;
+    let html = '';
+    carrinho.forEach((item, id) => {
+        const sub = item.preco * item.quantidade;
+        total += sub;
+        html += `
+        <div class="d-flex align-items-center px-3 py-2 border-bottom">
+            <div class="flex-grow-1 me-2" style="min-width:0;">
+                <div class="fw-semibold small text-truncate">${escHtml(item.nome)}</div>
+                <div class="text-muted" style="font-size:.73rem;">R$ ${fmtBrl(item.preco)} × ${item.quantidade}</div>
+            </div>
+            <div class="d-flex align-items-center gap-1 me-2">
+                <button class="btn btn-sm btn-outline-secondary px-2 py-1" onclick="alterarQtd(${id}, -1)">
+                    <i class="bi bi-dash"></i>
+                </button>
+                <span class="fw-bold small px-1">${item.quantidade}</span>
+                <button class="btn btn-sm btn-outline-secondary px-2 py-1" onclick="alterarQtd(${id}, 1)">
+                    <i class="bi bi-plus"></i>
+                </button>
+            </div>
+            <div class="text-end" style="min-width:70px;">
+                <div class="fw-bold small">R$ ${fmtBrl(sub)}</div>
+                <button class="btn btn-link text-danger p-0" style="font-size:.8rem;" onclick="remover(${id})">
+                    <i class="bi bi-x-lg"></i>
+                </button>
+            </div>
+        </div>`;
+    });
+
+    itensEl.innerHTML = html;
+    document.getElementById('totalCarrinho').textContent = 'R$ ' + fmtBrl(total);
+}
+
+async function finalizarVenda() {
+    const btn = document.getElementById('btnFinalizar');
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Processando...';
+
+    const itens = [];
+    carrinho.forEach((item, id) => itens.push({ produto_id: id, quantidade: item.quantidade }));
+
+    try {
+        const res = await fetch('/pdv/venda', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ itens })
+        });
+        const data = await res.json();
+
+        if (data.sucesso) {
+            document.getElementById('msgSucesso').textContent =
+                `Venda #${data.venda_id} — Total: R$ ${fmtBrl(data.total)}`;
+            new bootstrap.Modal(document.getElementById('modalSucesso')).show();
+        } else {
+            alert('Erro: ' + data.erro);
+            btn.disabled = false;
+            btn.innerHTML = '<i class="bi bi-check-circle me-2"></i>Finalizar Venda';
+        }
+    } catch (e) {
+        alert('Erro de comunicação com o servidor.');
+        btn.disabled = false;
+        btn.innerHTML = '<i class="bi bi-check-circle me-2"></i>Finalizar Venda';
+    }
+}
+
+function fmtBrl(v) {
+    return v.toFixed(2).replace('.', ',');
+}
+
+function escHtml(str) {
+    return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+</script>
+<style>
+.item-produto:hover { background: #f8f9fa; }
+</style>
+{% endblock %}
