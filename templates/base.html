@@ -88,12 +88,22 @@
         .content-area { padding: 1.5rem; flex: 1; }
 
         .card { border-radius: 10px; }
+
+        .notif-badge {
+            background: #ef4444;
+            color: #fff;
+            font-size: .6rem;
+            padding: .15rem .4rem;
+            border-radius: 999px;
+            font-weight: 700;
+            line-height: 1.2;
+        }
     </style>
 </head>
 <body>
     <div id="sidebar">
         <div class="sidebar-brand">
-            <i class="bi bi-boxes me-2 text-indigo-400"></i> Estoque Pro
+            <i class="bi bi-boxes me-2"></i> Estoque Pro
         </div>
 
         <nav class="sidebar-nav mt-1">
@@ -114,13 +124,29 @@
                class="nav-link {% if request.blueprint == 'estoque' %}active{% endif %}">
                 <i class="bi bi-box-seam"></i> Estoque
             </a>
+            <a href="{{ url_for('clientes.index') }}"
+               class="nav-link {% if request.blueprint == 'clientes' %}active{% endif %}">
+                <i class="bi bi-people"></i> Clientes
+            </a>
 
             {% if current_user.is_admin %}
             <div class="sidebar-section">Administração</div>
             <a href="{{ url_for('usuarios.index') }}"
                class="nav-link {% if request.blueprint == 'usuarios' %}active{% endif %}">
-                <i class="bi bi-people"></i> Usuários
+                <i class="bi bi-person-gear"></i> Usuários
             </a>
+            <a href="{{ url_for('logs.index') }}"
+               class="nav-link {% if request.blueprint == 'logs' %}active{% endif %}">
+                <i class="bi bi-journal-text"></i> Logs
+            </a>
+            {% if notif_count > 0 %}
+            <a href="{{ url_for('dashboard.index') }}#cobrancas"
+               class="nav-link text-warning">
+                <i class="bi bi-bell-fill"></i>
+                Cobranças
+                <span class="notif-badge ms-auto">{{ notif_count }}</span>
+            </a>
+            {% endif %}
             {% endif %}
         </nav>
 
@@ -144,6 +170,11 @@
     <div id="main-content">
         <div class="topbar">
             <h6 class="mb-0">{% block page_title %}{% endblock %}</h6>
+            {% if notif_count > 0 %}
+            <span class="ms-auto badge bg-danger">
+                <i class="bi bi-bell me-1"></i>{{ notif_count }} cobrança{{ 's' if notif_count != 1 }} pendente{{ 's' if notif_count != 1 }}
+            </span>
+            {% endif %}
         </div>
 
         <div class="content-area">

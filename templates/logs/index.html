@@ -1,0 +1,73 @@
+{% extends "base.html" %}
+{% block title %}Logs — Estoque Pro{% endblock %}
+{% block page_title %}Logs de Atividade{% endblock %}
+{% block content %}
+
+<div class="card border-0 shadow-sm">
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0" style="font-size:.875rem;">
+                <thead class="table-light">
+                    <tr>
+                        <th class="ps-3">Data / Hora</th>
+                        <th>Usuário</th>
+                        <th>Ação</th>
+                        <th>Detalhes</th>
+                        <th class="pe-3">IP</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for l in logs.items %}
+                    <tr>
+                        <td class="ps-3 text-muted small font-monospace" style="white-space:nowrap;">
+                            {{ l.criado_em.strftime('%d/%m/%Y %H:%M:%S') }}
+                        </td>
+                        <td>
+                            <span class="fw-semibold">{{ l.usuario.nome }}</span>
+                            <br><small class="text-muted">{{ 'Admin' if l.usuario.is_admin else 'Vendedor' }}</small>
+                        </td>
+                        <td>
+                            <span class="badge
+                                {% if 'Login' in l.acao or 'Logout' in l.acao %}bg-secondary
+                                {% elif 'Criou' in l.acao or 'Registrou' in l.acao %}bg-success
+                                {% elif 'Editou' in l.acao or 'pago' in l.acao %}bg-primary
+                                {% elif 'Removeu' in l.acao %}bg-danger
+                                {% else %}bg-secondary{% endif %}
+                                bg-opacity-75">
+                                {{ l.acao }}
+                            </span>
+                        </td>
+                        <td class="text-muted small">{{ l.detalhes or '—' }}</td>
+                        <td class="pe-3 text-muted small font-monospace">{{ l.ip or '—' }}</td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="5" class="text-center text-muted py-5">
+                            <i class="bi bi-journal-text d-block mb-2" style="font-size:2rem;"></i>
+                            Nenhum log registrado ainda.
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+{% if logs.pages > 1 %}
+<nav class="mt-3 d-flex justify-content-center">
+    <ul class="pagination pagination-sm">
+        {% for p in logs.iter_pages(left_edge=1, right_edge=1, left_current=2, right_current=2) %}
+            {% if p %}
+                <li class="page-item {{ 'active' if p == logs.page }}">
+                    <a class="page-link" href="?page={{ p }}">{{ p }}</a>
+                </li>
+            {% else %}
+                <li class="page-item disabled"><span class="page-link">…</span></li>
+            {% endif %}
+        {% endfor %}
+    </ul>
+</nav>
+{% endif %}
+
+{% endblock %}

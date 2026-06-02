@@ -10,7 +10,7 @@
         <div class="card border-0 shadow-sm d-flex flex-column flex-grow-1" style="min-height:0;">
             <div class="card-header bg-white border-bottom py-3">
                 <input type="text" id="buscaProduto" class="form-control"
-                       placeholder="&#xF52A;  Buscar por nome ou código..." autofocus>
+                       placeholder="&#xF52A;  Buscar por nome, código ou tag..." autofocus>
             </div>
             <div id="listaProdutos" class="card-body overflow-auto p-2">
                 <div class="text-center text-muted py-5" id="dica">
@@ -24,7 +24,9 @@
     <!-- Painel do Carrinho -->
     <div class="col-lg-5 d-flex flex-column" style="min-height:0;">
         <div class="card border-0 shadow-sm d-flex flex-column flex-grow-1" style="min-height:0;">
-            <div class="card-header bg-white border-bottom py-3 d-flex justify-content-between align-items-center">
+
+            <!-- Header Carrinho -->
+            <div class="card-header bg-white border-bottom py-2 d-flex justify-content-between align-items-center">
                 <h6 class="mb-0 fw-semibold">
                     <i class="bi bi-cart3 me-2"></i>Carrinho
                     <span id="qtdItens" class="badge bg-secondary ms-1" style="display:none;">0</span>
@@ -34,17 +36,80 @@
                 </button>
             </div>
 
+            <!-- Cliente -->
+            <div class="border-bottom px-3 py-2 bg-light">
+                <label class="form-label fw-semibold small mb-1">
+                    <i class="bi bi-person me-1"></i>Cliente
+                </label>
+                <div class="position-relative">
+                    <input type="text" id="buscaCliente" class="form-control form-control-sm"
+                           placeholder="Buscar cliente..." autocomplete="off">
+                    <div id="listaClientes" class="list-group position-absolute w-100 shadow-sm"
+                         style="z-index:999;top:100%;display:none;max-height:180px;overflow-y:auto;"></div>
+                </div>
+                <div id="clienteSelecionado" class="mt-1 d-none align-items-center gap-2">
+                    <span class="badge bg-primary py-1 px-2" id="nomeClienteBadge"></span>
+                    <button class="btn btn-link btn-sm text-danger p-0 small" onclick="limparCliente()">
+                        <i class="bi bi-x-circle"></i> remover
+                    </button>
+                </div>
+                <input type="hidden" id="clienteId" value="">
+            </div>
+
+            <!-- Itens do Carrinho -->
             <div class="card-body p-0 overflow-auto flex-grow-1" style="min-height:0;">
-                <div id="carrinhoVazio" class="text-center text-muted py-5">
+                <div id="carrinhoVazio" class="text-center text-muted py-4">
                     <i class="bi bi-cart-x d-block mb-2" style="font-size:2.5rem;opacity:.4;"></i>
-                    <p class="mb-0">Carrinho vazio</p>
+                    <p class="mb-0 small">Carrinho vazio</p>
                 </div>
                 <div id="itensCarrinho"></div>
             </div>
 
+            <!-- Rodapé: Pagamento + Total -->
             <div class="card-footer bg-white py-3">
-                <div class="d-flex justify-content-between align-items-center mb-3">
-                    <span class="text-muted fw-semibold">Total</span>
+                <!-- Tipo de Pagamento -->
+                <div class="mb-2">
+                    <label class="form-label fw-semibold small mb-1">Pagamento</label>
+                    <div class="btn-group w-100" role="group">
+                        <input type="radio" class="btn-check" name="tipoPgto" id="pgtoAvista" value="avista" checked onchange="mudarPagamento()">
+                        <label class="btn btn-outline-secondary btn-sm" for="pgtoAvista">
+                            <i class="bi bi-cash me-1"></i>À Vista
+                        </label>
+                        <input type="radio" class="btn-check" name="tipoPgto" id="pgtoPrazo" value="aprazo" onchange="mudarPagamento()">
+                        <label class="btn btn-outline-secondary btn-sm" for="pgtoPrazo">
+                            <i class="bi bi-calendar me-1"></i>A Prazo
+                        </label>
+                        <input type="radio" class="btn-check" name="tipoPgto" id="pgtoParcelado" value="parcelado" onchange="mudarPagamento()">
+                        <label class="btn btn-outline-secondary btn-sm" for="pgtoParcelado">
+                            <i class="bi bi-credit-card me-1"></i>Parcelado
+                        </label>
+                    </div>
+                </div>
+
+                <!-- Campos de vencimento/parcelas -->
+                <div id="camposVencimento" class="mb-2 d-none">
+                    <div class="row g-2">
+                        <div class="col" id="colVencimento">
+                            <label class="form-label small fw-semibold mb-1">Vencimento</label>
+                            <input type="date" id="dataVencimento" class="form-control form-control-sm">
+                        </div>
+                        <div class="col d-none" id="colParcelas">
+                            <label class="form-label small fw-semibold mb-1">Parcelas</label>
+                            <input type="number" id="numParcelas" class="form-control form-control-sm"
+                                   placeholder="Ex: 3" min="2" max="48">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Observação -->
+                <div class="mb-2">
+                    <input type="text" id="observacao" class="form-control form-control-sm"
+                           placeholder="Observação (opcional)">
+                </div>
+
+                <!-- Total e Botão -->
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                    <span class="text-muted fw-semibold small">Total</span>
                     <h4 class="mb-0 fw-bold text-success" id="totalCarrinho">R$ 0,00</h4>
                 </div>
                 <button class="btn btn-success w-100 fw-semibold py-2"
@@ -56,7 +121,7 @@
     </div>
 </div>
 
-<!-- Modal Confirmação -->
+<!-- Modal Sucesso -->
 <div class="modal fade" id="modalSucesso" tabindex="-1" data-bs-backdrop="static">
     <div class="modal-dialog modal-sm modal-dialog-centered">
         <div class="modal-content border-0 shadow">
@@ -69,7 +134,7 @@
                 <p class="text-muted small" id="msgSucesso"></p>
                 <button class="btn text-white w-100 fw-semibold mt-1"
                         style="background:#6366f1;"
-                        data-bs-dismiss="modal" onclick="limparCarrinho()">
+                        data-bs-dismiss="modal" onclick="limparTudo()">
                     <i class="bi bi-plus-lg me-1"></i> Nova Venda
                 </button>
             </div>
@@ -80,9 +145,11 @@
 
 {% block scripts %}
 <script>
-const carrinho = new Map(); // produto_id → {nome, preco, quantidade, max}
-let debounce;
+const carrinho = new Map();
+let debounce, debounceCliente;
+let clienteId = null;
 
+// ── Produtos ──────────────────────────────────────────────
 document.getElementById('buscaProduto').addEventListener('input', function () {
     clearTimeout(debounce);
     debounce = setTimeout(() => buscarProdutos(this.value.trim()), 280);
@@ -90,8 +157,7 @@ document.getElementById('buscaProduto').addEventListener('input', function () {
 
 async function buscarProdutos(termo) {
     if (!termo) {
-        document.getElementById('listaProdutos').innerHTML =
-            document.getElementById('dica').outerHTML;
+        document.getElementById('listaProdutos').innerHTML = document.getElementById('dica').outerHTML;
         return;
     }
     const res = await fetch('/pdv/produtos?q=' + encodeURIComponent(termo));
@@ -99,7 +165,7 @@ async function buscarProdutos(termo) {
 
     if (!produtos.length) {
         document.getElementById('listaProdutos').innerHTML =
-            '<div class="text-center text-muted py-5">Nenhum produto encontrado.</div>';
+            '<div class="text-center text-muted py-5 small">Nenhum produto encontrado.</div>';
         return;
     }
 
@@ -108,14 +174,15 @@ async function buscarProdutos(termo) {
              style="cursor:pointer;" onclick="adicionar(${p.id}, ${JSON.stringify(p.nome)}, ${p.preco}, ${p.quantidade})">
             <div class="flex-grow-1 me-2">
                 <div class="fw-semibold small">${escHtml(p.nome)}</div>
-                <div class="text-muted" style="font-size:.75rem;">
+                <div class="text-muted" style="font-size:.73rem;">
                     ${p.codigo ? escHtml(p.codigo) + ' &bull; ' : ''}
+                    ${p.tag ? '<span class="badge bg-secondary bg-opacity-50">' + escHtml(p.tag) + '</span> &bull; ' : ''}
                     Estoque: <strong>${p.quantidade}</strong>
                 </div>
             </div>
             <div class="text-end">
                 <div class="fw-bold text-primary small">R$ ${fmtBrl(p.preco)}</div>
-                <button class="btn btn-sm mt-1 text-white" style="background:#6366f1;font-size:.75rem;">
+                <button class="btn btn-sm mt-1 text-white" style="background:#6366f1;font-size:.73rem;">
                     <i class="bi bi-plus"></i> Add
                 </button>
             </div>
@@ -123,6 +190,78 @@ async function buscarProdutos(termo) {
     `).join('');
 }
 
+// ── Clientes ──────────────────────────────────────────────
+document.getElementById('buscaCliente').addEventListener('input', function () {
+    clearTimeout(debounceCliente);
+    const val = this.value.trim();
+    if (!val) { fecharListaClientes(); return; }
+    debounceCliente = setTimeout(() => buscarClientes(val), 300);
+});
+
+async function buscarClientes(termo) {
+    const res = await fetch('/pdv/clientes?q=' + encodeURIComponent(termo));
+    const clientes = await res.json();
+    const lista = document.getElementById('listaClientes');
+
+    if (!clientes.length) {
+        lista.innerHTML = '<div class="list-group-item small text-muted">Nenhum cliente encontrado</div>';
+        lista.style.display = 'block';
+        return;
+    }
+
+    lista.innerHTML = clientes.map(c => `
+        <button type="button" class="list-group-item list-group-item-action small py-2"
+                onclick="selecionarCliente(${c.id}, ${JSON.stringify(c.nome)}, ${JSON.stringify(c.identificacao)})">
+            <strong>${escHtml(c.nome)}</strong>
+            ${c.identificacao ? '<span class="text-muted ms-1">' + escHtml(c.identificacao) + '</span>' : ''}
+        </button>
+    `).join('');
+    lista.style.display = 'block';
+}
+
+function selecionarCliente(id, nome, doc) {
+    clienteId = id;
+    document.getElementById('clienteId').value = id;
+    document.getElementById('buscaCliente').value = '';
+    document.getElementById('nomeClienteBadge').textContent = nome + (doc ? ' — ' + doc : '');
+    document.getElementById('clienteSelecionado').classList.remove('d-none');
+    document.getElementById('clienteSelecionado').classList.add('d-flex');
+    fecharListaClientes();
+}
+
+function limparCliente() {
+    clienteId = null;
+    document.getElementById('clienteId').value = '';
+    document.getElementById('buscaCliente').value = '';
+    document.getElementById('clienteSelecionado').classList.add('d-none');
+    document.getElementById('clienteSelecionado').classList.remove('d-flex');
+}
+
+function fecharListaClientes() {
+    document.getElementById('listaClientes').style.display = 'none';
+}
+
+document.addEventListener('click', function(e) {
+    if (!e.target.closest('#buscaCliente') && !e.target.closest('#listaClientes')) {
+        fecharListaClientes();
+    }
+});
+
+// ── Pagamento ─────────────────────────────────────────────
+function mudarPagamento() {
+    const tipo = document.querySelector('input[name="tipoPgto"]:checked').value;
+    const campos = document.getElementById('camposVencimento');
+    const colParcelas = document.getElementById('colParcelas');
+
+    if (tipo === 'avista') {
+        campos.classList.add('d-none');
+    } else {
+        campos.classList.remove('d-none');
+        colParcelas.classList.toggle('d-none', tipo !== 'parcelado');
+    }
+}
+
+// ── Carrinho ──────────────────────────────────────────────
 function adicionar(id, nome, preco, max) {
     if (carrinho.has(id)) {
         const item = carrinho.get(id);
@@ -134,10 +273,7 @@ function adicionar(id, nome, preco, max) {
     renderCarrinho();
 }
 
-function remover(id) {
-    carrinho.delete(id);
-    renderCarrinho();
-}
+function remover(id) { carrinho.delete(id); renderCarrinho(); }
 
 function alterarQtd(id, delta) {
     const item = carrinho.get(id);
@@ -148,9 +284,14 @@ function alterarQtd(id, delta) {
     renderCarrinho();
 }
 
-function limparCarrinho() {
-    carrinho.clear();
-    renderCarrinho();
+function limparCarrinho() { carrinho.clear(); renderCarrinho(); }
+
+function limparTudo() {
+    limparCarrinho();
+    limparCliente();
+    document.getElementById('observacao').value = '';
+    document.getElementById('pgtoAvista').checked = true;
+    mudarPagamento();
 }
 
 function renderCarrinho() {
@@ -173,8 +314,7 @@ function renderCarrinho() {
     qtdBadge.style.display = '';
     qtdBadge.textContent = carrinho.size;
 
-    let total = 0;
-    let html = '';
+    let total = 0, html = '';
     carrinho.forEach((item, id) => {
         const sub = item.preco * item.quantidade;
         total += sub;
@@ -182,7 +322,7 @@ function renderCarrinho() {
         <div class="d-flex align-items-center px-3 py-2 border-bottom">
             <div class="flex-grow-1 me-2" style="min-width:0;">
                 <div class="fw-semibold small text-truncate">${escHtml(item.nome)}</div>
-                <div class="text-muted" style="font-size:.73rem;">R$ ${fmtBrl(item.preco)} × ${item.quantidade}</div>
+                <div class="text-muted" style="font-size:.72rem;">R$ ${fmtBrl(item.preco)} × ${item.quantidade}</div>
             </div>
             <div class="d-flex align-items-center gap-1 me-2">
                 <button class="btn btn-sm btn-outline-secondary px-2 py-1" onclick="alterarQtd(${id}, -1)">
@@ -206,7 +346,21 @@ function renderCarrinho() {
     document.getElementById('totalCarrinho').textContent = 'R$ ' + fmtBrl(total);
 }
 
+// ── Finalizar ─────────────────────────────────────────────
 async function finalizarVenda() {
+    const tipo = document.querySelector('input[name="tipoPgto"]:checked').value;
+    const dataVenc = document.getElementById('dataVencimento').value;
+    const numParcelas = document.getElementById('numParcelas').value;
+
+    if (tipo !== 'avista' && !dataVenc) {
+        alert('Informe a data de vencimento.');
+        return;
+    }
+    if (tipo === 'parcelado' && (!numParcelas || numParcelas < 2)) {
+        alert('Informe o número de parcelas (mínimo 2).');
+        return;
+    }
+
     const btn = document.getElementById('btnFinalizar');
     btn.disabled = true;
     btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Processando...';
@@ -214,17 +368,27 @@ async function finalizarVenda() {
     const itens = [];
     carrinho.forEach((item, id) => itens.push({ produto_id: id, quantidade: item.quantidade }));
 
+    const payload = {
+        itens,
+        cliente_id: clienteId,
+        tipo_pagamento: tipo,
+        data_vencimento: dataVenc || null,
+        num_parcelas: numParcelas ? parseInt(numParcelas) : null,
+        observacao: document.getElementById('observacao').value,
+    };
+
     try {
         const res = await fetch('/pdv/venda', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ itens })
+            body: JSON.stringify(payload),
         });
         const data = await res.json();
 
         if (data.sucesso) {
+            const tipoLabel = { avista: 'À Vista', aprazo: 'A Prazo', parcelado: 'Parcelado' }[tipo] || tipo;
             document.getElementById('msgSucesso').textContent =
-                `Venda #${data.venda_id} — Total: R$ ${fmtBrl(data.total)}`;
+                `Venda #${data.venda_id} — Total: R$ ${fmtBrl(data.total)} — ${tipoLabel}`;
             new bootstrap.Modal(document.getElementById('modalSucesso')).show();
         } else {
             alert('Erro: ' + data.erro);
@@ -238,12 +402,9 @@ async function finalizarVenda() {
     }
 }
 
-function fmtBrl(v) {
-    return v.toFixed(2).replace('.', ',');
-}
-
+function fmtBrl(v) { return v.toFixed(2).replace('.', ','); }
 function escHtml(str) {
-    return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+    return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
 </script>
 <style>

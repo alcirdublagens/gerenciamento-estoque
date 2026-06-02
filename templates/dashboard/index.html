@@ -3,9 +3,10 @@
 {% block page_title %}Dashboard{% endblock %}
 {% block content %}
 
+<!-- KPIs -->
 <div class="row g-3 mb-4">
     <div class="col-sm-6 col-xl-3">
-        <div class="card border-0 shadow-sm">
+        <div class="card border-0 shadow-sm h-100">
             <div class="card-body d-flex align-items-center gap-3">
                 <div class="rounded-3 p-3" style="background:rgba(99,102,241,.12);">
                     <i class="bi bi-cart-check" style="font-size:1.5rem;color:#6366f1;"></i>
@@ -18,7 +19,7 @@
         </div>
     </div>
     <div class="col-sm-6 col-xl-3">
-        <div class="card border-0 shadow-sm">
+        <div class="card border-0 shadow-sm h-100">
             <div class="card-body d-flex align-items-center gap-3">
                 <div class="rounded-3 p-3 bg-success bg-opacity-10">
                     <i class="bi bi-currency-dollar text-success" style="font-size:1.5rem;"></i>
@@ -26,37 +27,92 @@
                 <div>
                     <p class="text-muted small mb-0">Faturamento Hoje</p>
                     <h4 class="mb-0 fw-bold">R$ {{ "%.2f"|format(total_hoje) }}</h4>
+                    <small class="text-muted">Custo: R$ {{ "%.2f"|format(custo_hoje) }}</small>
                 </div>
             </div>
         </div>
     </div>
     <div class="col-sm-6 col-xl-3">
-        <div class="card border-0 shadow-sm">
+        <div class="card border-0 shadow-sm h-100">
             <div class="card-body d-flex align-items-center gap-3">
-                <div class="rounded-3 p-3 bg-warning bg-opacity-10">
-                    <i class="bi bi-box-seam text-warning" style="font-size:1.5rem;"></i>
+                <div class="rounded-3 p-3 {{ 'bg-success bg-opacity-10' if lucro_hoje >= 0 else 'bg-danger bg-opacity-10' }}">
+                    <i class="bi bi-graph-up-arrow {{ 'text-success' if lucro_hoje >= 0 else 'text-danger' }}" style="font-size:1.5rem;"></i>
                 </div>
                 <div>
-                    <p class="text-muted small mb-0">Produtos Ativos</p>
-                    <h4 class="mb-0 fw-bold">{{ total_produtos }}</h4>
+                    <p class="text-muted small mb-0">Lucro Hoje</p>
+                    <h4 class="mb-0 fw-bold {{ 'text-success' if lucro_hoje >= 0 else 'text-danger' }}">
+                        R$ {{ "%.2f"|format(lucro_hoje) }}
+                    </h4>
                 </div>
             </div>
         </div>
     </div>
     <div class="col-sm-6 col-xl-3">
-        <div class="card border-0 shadow-sm">
+        <div class="card border-0 shadow-sm h-100">
             <div class="card-body d-flex align-items-center gap-3">
                 <div class="rounded-3 p-3 bg-info bg-opacity-10">
                     <i class="bi bi-people text-info" style="font-size:1.5rem;"></i>
                 </div>
                 <div>
-                    <p class="text-muted small mb-0">Usuários Ativos</p>
-                    <h4 class="mb-0 fw-bold">{{ total_usuarios }}</h4>
+                    <p class="text-muted small mb-0">Clientes / Usuários</p>
+                    <h4 class="mb-0 fw-bold">{{ total_clientes }} / {{ total_produtos }}</h4>
+                    <small class="text-muted">clientes / produtos ativos</small>
                 </div>
             </div>
         </div>
     </div>
 </div>
+
+<!-- Alertas -->
+{% if vencidas %}
+<div class="alert alert-danger d-flex align-items-start gap-2 shadow-sm mb-3" id="cobrancas">
+    <i class="bi bi-exclamation-circle-fill flex-shrink-0 mt-1"></i>
+    <div class="flex-grow-1">
+        <strong>{{ vencidas|length }} cobrança(s) vencida(s):</strong>
+        <div class="table-responsive mt-2">
+            <table class="table table-sm mb-0 bg-white rounded">
+                <thead><tr><th>#</th><th>Cliente</th><th>Vendedor</th><th>Total</th><th>Venceu em</th><th></th></tr></thead>
+                <tbody>
+                {% for v in vencidas %}
+                <tr>
+                    <td class="small">#{{ v.id }}</td>
+                    <td class="small">{{ v.cliente.nome if v.cliente else '—' }}</td>
+                    <td class="small">{{ v.vendedor.nome }}</td>
+                    <td class="small fw-semibold">R$ {{ "%.2f"|format(v.total) }}</td>
+                    <td class="small text-danger">{{ v.data_vencimento.strftime('%d/%m/%Y') }}</td>
+                    <td>
+                        <form method="POST" action="{{ url_for('pdv.marcar_pago', id=v.id) }}" class="d-inline">
+                            <button class="btn btn-xs btn-outline-success" style="font-size:.7rem;padding:.2rem .5rem;">
+                                <i class="bi bi-check2"></i> Pago
+                            </button>
+                        </form>
+                    </td>
+                </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+{% if vencendo %}
+<div class="alert alert-warning d-flex align-items-start gap-2 shadow-sm mb-3">
+    <i class="bi bi-bell-fill flex-shrink-0 mt-1"></i>
+    <div class="flex-grow-1">
+        <strong>{{ vencendo|length }} cobrança(s) vencendo nos próximos 3 dias:</strong>
+        <div class="mt-1 d-flex flex-wrap gap-1">
+            {% for v in vencendo %}
+            <span class="badge bg-warning text-dark">
+                #{{ v.id }} — {{ v.cliente.nome if v.cliente else 'sem cliente' }} —
+                R$ {{ "%.2f"|format(v.total) }} —
+                vence {{ v.data_vencimento.strftime('%d/%m') }}
+            </span>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+{% endif %}
 
 {% if produtos_baixo_estoque %}
 <div class="alert alert-warning d-flex align-items-start gap-2 shadow-sm mb-4">
@@ -65,55 +121,119 @@
         <strong>{{ produtos_baixo_estoque|length }} produto(s) com estoque baixo:</strong>
         <div class="mt-1 d-flex flex-wrap gap-1">
             {% for p in produtos_baixo_estoque %}
-                <a href="{{ url_for('estoque.editar', id=p.id) }}"
-                   class="badge bg-warning text-dark text-decoration-none">
-                    {{ p.nome }} ({{ p.quantidade }})
-                </a>
+            <a href="{{ url_for('estoque.editar', id=p.id) }}"
+               class="badge bg-warning text-dark text-decoration-none">
+                {{ p.nome }} ({{ p.quantidade }})
+            </a>
             {% endfor %}
         </div>
     </div>
 </div>
 {% endif %}
 
-<div class="card border-0 shadow-sm">
-    <div class="card-header bg-white border-bottom py-3">
-        <h6 class="mb-0 fw-semibold">Últimas Vendas</h6>
+<div class="row g-3 mb-4">
+    <!-- Desempenho dos Vendedores -->
+    <div class="col-lg-5">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-header bg-white border-bottom py-3">
+                <h6 class="mb-0 fw-semibold">
+                    <i class="bi bi-trophy me-2 text-warning"></i>Desempenho — últimos 30 dias
+                </h6>
+            </div>
+            <div class="card-body p-0">
+                <table class="table table-hover align-middle mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th class="ps-3">Vendedor</th>
+                            <th class="text-center">Vendas</th>
+                            <th class="text-end pe-3">Total</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for row in desempenho %}
+                        <tr>
+                            <td class="ps-3">
+                                <div class="fw-semibold small">{{ row[0].nome }}</div>
+                                <span class="badge {{ 'bg-primary' if row[0].is_admin else 'bg-secondary' }} bg-opacity-75" style="font-size:.65rem;">
+                                    {{ 'Admin' if row[0].is_admin else 'Vendedor' }}
+                                </span>
+                            </td>
+                            <td class="text-center fw-bold">{{ row[1] }}</td>
+                            <td class="text-end pe-3 fw-semibold text-success small">
+                                R$ {{ "%.2f"|format(row[2]) }}
+                            </td>
+                        </tr>
+                        {% else %}
+                        <tr>
+                            <td colspan="3" class="text-center text-muted py-4 small">
+                                Nenhuma venda nos últimos 30 dias.
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
     </div>
-    <div class="card-body p-0">
-        <div class="table-responsive">
-            <table class="table table-hover align-middle mb-0">
-                <thead class="table-light">
-                    <tr>
-                        <th class="ps-3">#</th>
-                        <th>Data / Hora</th>
-                        <th>Vendedor</th>
-                        <th>Itens</th>
-                        <th class="text-end pe-3">Total</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for venda in ultimas_vendas %}
-                    <tr>
-                        <td class="ps-3 text-muted small">{{ venda.id }}</td>
-                        <td>{{ venda.criado_em.strftime('%d/%m/%Y %H:%M') }}</td>
-                        <td>{{ venda.vendedor.nome }}</td>
-                        <td>
-                            <span class="badge bg-secondary bg-opacity-75">{{ venda.itens|length }}</span>
-                        </td>
-                        <td class="text-end pe-3 fw-semibold text-success">
-                            R$ {{ "%.2f"|format(venda.total) }}
-                        </td>
-                    </tr>
-                    {% else %}
-                    <tr>
-                        <td colspan="5" class="text-center text-muted py-5">
-                            <i class="bi bi-receipt d-block mb-2" style="font-size:2rem;"></i>
-                            Nenhuma venda registrada ainda.
-                        </td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
+
+    <!-- Últimas Vendas -->
+    <div class="col-lg-7">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-header bg-white border-bottom py-3">
+                <h6 class="mb-0 fw-semibold"><i class="bi bi-receipt me-2"></i>Últimas Vendas</h6>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th class="ps-3">#</th>
+                                <th>Cliente</th>
+                                <th>Vendedor</th>
+                                <th>Pagamento</th>
+                                <th>Status</th>
+                                <th class="text-end pe-3">Total</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for venda in ultimas_vendas %}
+                            <tr>
+                                <td class="ps-3 text-muted small">{{ venda.id }}</td>
+                                <td class="small">{{ venda.cliente.nome if venda.cliente else '—' }}</td>
+                                <td class="small">{{ venda.vendedor.nome }}</td>
+                                <td>
+                                    {% if venda.tipo_pagamento == 'avista' %}
+                                        <span class="badge bg-success bg-opacity-75">À Vista</span>
+                                    {% elif venda.tipo_pagamento == 'aprazo' %}
+                                        <span class="badge bg-warning text-dark">A Prazo</span>
+                                    {% else %}
+                                        <span class="badge bg-info text-dark">
+                                            {{ venda.num_parcelas }}x
+                                        </span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if venda.status_pagamento == 'pago' %}
+                                        <span class="badge bg-success bg-opacity-75">Pago</span>
+                                    {% else %}
+                                        <span class="badge bg-danger bg-opacity-75">Pendente</span>
+                                    {% endif %}
+                                </td>
+                                <td class="text-end pe-3 fw-semibold text-success small">
+                                    R$ {{ "%.2f"|format(venda.total) }}
+                                </td>
+                            </tr>
+                            {% else %}
+                            <tr>
+                                <td colspan="6" class="text-center text-muted py-4 small">
+                                    Nenhuma venda registrada ainda.
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
         </div>
     </div>
 </div>

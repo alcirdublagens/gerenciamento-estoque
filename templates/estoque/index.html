@@ -4,19 +4,25 @@
 {% block content %}
 
 <div class="d-flex justify-content-between align-items-center mb-3 gap-2 flex-wrap">
-    <form class="d-flex gap-2" method="GET" style="flex:1; max-width:400px;">
-        <input type="text" name="busca" class="form-control" placeholder="Buscar produto..." value="{{ busca }}">
+    <form class="d-flex gap-2 flex-wrap" method="GET" style="flex:1;">
+        <input type="text" name="busca" class="form-control" style="max-width:280px;"
+               placeholder="Buscar por nome, código ou tag..." value="{{ busca }}">
+        <select name="tag" class="form-select" style="max-width:180px;" onchange="this.form.submit()">
+            <option value="">Todas as tags</option>
+            {% for t in tags %}
+            <option value="{{ t }}" {{ 'selected' if t == tag }}>{{ t }}</option>
+            {% endfor %}
+        </select>
         <button type="submit" class="btn btn-outline-secondary"><i class="bi bi-search"></i></button>
-        {% if busca %}
-        <a href="{{ url_for('estoque.index') }}" class="btn btn-outline-secondary">
-            <i class="bi bi-x"></i>
-        </a>
+        {% if busca or tag %}
+        <a href="{{ url_for('estoque.index') }}" class="btn btn-outline-secondary"><i class="bi bi-x"></i></a>
         {% endif %}
     </form>
-    <a href="{{ url_for('estoque.novo') }}" class="btn text-white fw-semibold"
-       style="background:#6366f1;">
+    {% if current_user.is_admin %}
+    <a href="{{ url_for('estoque.novo') }}" class="btn text-white fw-semibold" style="background:#6366f1;">
         <i class="bi bi-plus-lg me-1"></i> Novo Produto
     </a>
+    {% endif %}
 </div>
 
 <div class="card border-0 shadow-sm">
@@ -26,12 +32,13 @@
                 <thead class="table-light">
                     <tr>
                         <th class="ps-3">Código</th>
-                        <th>Nome</th>
-                        <th>Preço</th>
+                        <th>Nome / Tag</th>
+                        <th>Preço Venda</th>
+                        <th>Preço Custo</th>
+                        <th>Margem</th>
                         <th>Qtd.</th>
-                        <th>Mín.</th>
                         <th>Status</th>
-                        <th class="pe-3"></th>
+                        {% if current_user.is_admin %}<th class="pe-3"></th>{% endif %}
                     </tr>
                 </thead>
                 <tbody>
@@ -40,19 +47,31 @@
                         <td class="ps-3 text-muted small font-monospace">{{ p.codigo or '—' }}</td>
                         <td>
                             <span class="fw-semibold">{{ p.nome }}</span>
+                            {% if p.tag %}
+                            <span class="badge bg-secondary bg-opacity-50 ms-1 small">{{ p.tag }}</span>
+                            {% endif %}
                             {% if p.descricao %}
-                            <br><small class="text-muted">
-                                {{ p.descricao[:70] }}{{ '…' if p.descricao|length > 70 else '' }}
-                            </small>
+                            <br><small class="text-muted">{{ p.descricao[:60] }}{{ '…' if p.descricao|length > 60 }}</small>
                             {% endif %}
                         </td>
                         <td class="fw-semibold">R$ {{ "%.2f"|format(p.preco) }}</td>
+                        <td class="text-muted">R$ {{ "%.2f"|format(p.preco_custo) }}</td>
                         <td>
-                            <span class="fw-bold {% if p.quantidade <= p.estoque_minimo %}text-danger{% else %}text-success{% endif %}">
+                            {% if p.preco_custo > 0 %}
+                                {% set margem = ((p.preco - p.preco_custo) / p.preco_custo * 100) %}
+                                <span class="small fw-semibold {{ 'text-success' if margem >= 0 else 'text-danger' }}">
+                                    {{ "%.1f"|format(margem) }}%
+                                </span>
+                            {% else %}
+                                <span class="text-muted small">—</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <span class="fw-bold {{ 'text-danger' if p.quantidade <= p.estoque_minimo else 'text-success' }}">
                                 {{ p.quantidade }}
                             </span>
+                            <small class="text-muted">/ mín {{ p.estoque_minimo }}</small>
                         </td>
-                        <td class="text-muted">{{ p.estoque_minimo }}</td>
                         <td>
                             {% if p.quantidade == 0 %}
                                 <span class="badge bg-danger">Sem estoque</span>
@@ -62,6 +81,7 @@
                                 <span class="badge bg-success">OK</span>
                             {% endif %}
                         </td>
+                        {% if current_user.is_admin %}
                         <td class="text-end pe-3">
                             <a href="{{ url_for('estoque.editar', id=p.id) }}"
                                class="btn btn-sm btn-outline-primary me-1">
@@ -69,22 +89,25 @@
                             </a>
                             <form method="POST" action="{{ url_for('estoque.excluir', id=p.id) }}"
                                   class="d-inline"
-                                  onsubmit="return confirm('Remover o produto \'{{ p.nome }}\'?')">
+                                  onsubmit="return confirm('Remover \'{{ p.nome }}\'?')">
                                 <button type="submit" class="btn btn-sm btn-outline-danger">
                                     <i class="bi bi-trash"></i>
                                 </button>
                             </form>
                         </td>
+                        {% endif %}
                     </tr>
                     {% else %}
                     <tr>
-                        <td colspan="7" class="text-center text-muted py-5">
+                        <td colspan="8" class="text-center text-muted py-5">
                             <i class="bi bi-box-seam d-block mb-2" style="font-size:2rem;"></i>
-                            {% if busca %}
-                                Nenhum produto encontrado para "<strong>{{ busca }}</strong>".
+                            {% if busca or tag %}
+                                Nenhum produto encontrado.
                             {% else %}
                                 Nenhum produto cadastrado.
+                                {% if current_user.is_admin %}
                                 <a href="{{ url_for('estoque.novo') }}">Cadastrar agora</a>
+                                {% endif %}
                             {% endif %}
                         </td>
                     </tr>
