@@ -13,6 +13,10 @@ class Config:
     # abre e fecha sua própria conexão sem tentar reutilizá-la entre requests.
     if _db_url:
         from sqlalchemy.pool import NullPool
-        SQLALCHEMY_ENGINE_OPTIONS = {"poolclass": NullPool, "pool_pre_ping": True}
+        SQLALCHEMY_ENGINE_OPTIONS = {
+            "poolclass": NullPool,
+            "pool_pre_ping": True,
+            "connect_args": {"sslmode": "require"},
+        }
     else:
         SQLALCHEMY_ENGINE_OPTIONS = {"pool_pre_ping": True}
