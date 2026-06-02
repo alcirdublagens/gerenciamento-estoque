@@ -1,10 +1,13 @@
+import logging
 from flask import Flask, redirect, url_for
 from flask_login import current_user
 from config import Config
 from models import db, login_manager
-import models.usuario  # noqa: F401 — garante registro do user_loader
+import models.usuario  # noqa: F401
 import models.produto  # noqa: F401
 import models.venda    # noqa: F401
+
+log = logging.getLogger(__name__)
 
 
 def create_app():
@@ -40,8 +43,11 @@ def create_app():
         return redirect(url_for("auth.login"))
 
     with app.app_context():
-        db.create_all()
-        _seed_admin()
+        try:
+            db.create_all()
+            _seed_admin()
+        except Exception:
+            log.exception("Falha ao inicializar banco de dados")
 
     return app
 
