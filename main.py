@@ -11,7 +11,7 @@ log = logging.getLogger(__name__)
 
 
 def create_app():
-    app = Flask(__name__, static_folder="public")
+    app = Flask(__name__, static_folder="public", instance_path="/tmp")
     app.config.from_object(Config)
 
     db.init_app(app)
