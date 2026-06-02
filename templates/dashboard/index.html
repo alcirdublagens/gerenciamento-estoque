@@ -1,5 +1,5 @@
-{% extends "base.html" %}
-{% block title %}Dashboard — Estoque Pro{% endblock %}
+﻿{% extends "base.html" %}
+{% block title %}Dashboard — All Import Store{% endblock %}
 {% block page_title %}Dashboard{% endblock %}
 {% block content %}
 
@@ -51,12 +51,12 @@
         <div class="card border-0 shadow-sm h-100">
             <div class="card-body d-flex align-items-center gap-3">
                 <div class="rounded-3 p-3 bg-info bg-opacity-10">
-                    <i class="bi bi-people text-info" style="font-size:1.5rem;"></i>
+                    <i class="bi bi-person-check text-info" style="font-size:1.5rem;"></i>
                 </div>
                 <div>
-                    <p class="text-muted small mb-0">Clientes / Usuários</p>
-                    <h4 class="mb-0 fw-bold">{{ total_clientes }} / {{ total_produtos }}</h4>
-                    <small class="text-muted">clientes / produtos ativos</small>
+                    <p class="text-muted small mb-0">Vendedores Ativos Hoje</p>
+                    <h4 class="mb-0 fw-bold">{{ vendedores_hoje }}</h4>
+                    <small class="text-muted">de {{ total_clientes }} clientes cadastrados</small>
                 </div>
             </div>
         </div>

@@ -31,6 +31,10 @@ def index():
     total_produtos = Produto.query.filter_by(ativo=True).count()
     total_clientes = Cliente.query.filter_by(ativo=True).count()
 
+    vendedores_hoje = db.session.query(func.count(func.distinct(Venda.vendedor_id))).filter(
+        func.date(Venda.criado_em) == hoje
+    ).scalar() or 0
+
     produtos_baixo_estoque = Produto.query.filter(
         Produto.quantidade <= Produto.estoque_minimo,
         Produto.ativo == True
@@ -68,6 +72,7 @@ def index():
         qtd_vendas_hoje=len(vendas_hoje),
         total_produtos=total_produtos,
         total_clientes=total_clientes,
+        vendedores_hoje=vendedores_hoje,
         produtos_baixo_estoque=produtos_baixo_estoque,
         ultimas_vendas=ultimas_vendas,
         desempenho=desempenho,
