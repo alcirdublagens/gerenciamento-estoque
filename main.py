@@ -11,7 +11,7 @@ log = logging.getLogger(__name__)
 
 
 def create_app():
-    app = Flask(__name__, static_folder="public", instance_path="/tmp")
+    app = Flask(__name__, static_folder="public")
     app.config.from_object(Config)
 
     db.init_app(app)
@@ -43,11 +43,8 @@ def create_app():
         return redirect(url_for("auth.login"))
 
     with app.app_context():
-        try:
-            db.create_all()
-            _seed_admin()
-        except Exception:
-            log.exception("Falha ao inicializar banco de dados")
+        db.create_all()
+        _seed_admin()
 
     return app
 
