@@ -10,10 +10,10 @@
                 <thead class="table-light">
                     <tr>
                         <th class="ps-3">Data / Hora</th>
-                        <th>Usuário</th>
+                        <th class="d-none d-sm-table-cell">Usuário</th>
                         <th>Ação</th>
-                        <th>Detalhes</th>
-                        <th class="pe-3">IP</th>
+                        <th class="d-none d-md-table-cell">Detalhes</th>
+                        <th class="pe-3 d-none d-lg-table-cell">IP</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -22,7 +22,7 @@
                         <td class="ps-3 text-muted small font-monospace" style="white-space:nowrap;">
                             {{ l.criado_em.strftime('%d/%m/%Y %H:%M:%S') }}
                         </td>
-                        <td>
+                        <td class="d-none d-sm-table-cell">
                             <span class="fw-semibold">{{ l.usuario.nome }}</span>
                             <br><small class="text-muted">{{ 'Admin' if l.usuario.is_admin else 'Vendedor' }}</small>
                         </td>
@@ -37,8 +37,8 @@
                                 {{ l.acao }}
                             </span>
                         </td>
-                        <td class="text-muted small">{{ l.detalhes or '—' }}</td>
-                        <td class="pe-3 text-muted small font-monospace">{{ l.ip or '—' }}</td>
+                        <td class="text-muted small d-none d-md-table-cell">{{ l.detalhes or '—' }}</td>
+                        <td class="pe-3 text-muted small font-monospace d-none d-lg-table-cell">{{ l.ip or '—' }}</td>
                     </tr>
                     {% else %}
                     <tr>

@@ -31,20 +31,20 @@
             <table class="table table-hover align-middle mb-0">
                 <thead class="table-light">
                     <tr>
-                        <th class="ps-3">Código</th>
+                        <th class="ps-3 d-none d-md-table-cell">Código</th>
                         <th>Nome / Tag</th>
                         <th>Preço Venda</th>
-                        <th>Preço Custo</th>
-                        <th>Margem</th>
+                        <th class="d-none d-md-table-cell">Preço Custo</th>
+                        <th class="d-none d-md-table-cell">Margem</th>
                         <th>Qtd.</th>
-                        <th>Status</th>
+                        <th class="d-none d-sm-table-cell">Status</th>
                         {% if current_user.is_admin %}<th class="pe-3"></th>{% endif %}
                     </tr>
                 </thead>
                 <tbody>
                     {% for p in produtos %}
                     <tr>
-                        <td class="ps-3 text-muted small font-monospace">{{ p.codigo or '—' }}</td>
+                        <td class="ps-3 text-muted small font-monospace d-none d-md-table-cell">{{ p.codigo or '—' }}</td>
                         <td>
                             <span class="fw-semibold">{{ p.nome }}</span>
                             {% if p.tag %}
@@ -55,8 +55,8 @@
                             {% endif %}
                         </td>
                         <td class="fw-semibold">R$ {{ "%.2f"|format(p.preco) }}</td>
-                        <td class="text-muted">R$ {{ "%.2f"|format(p.preco_custo) }}</td>
-                        <td>
+                        <td class="text-muted d-none d-md-table-cell">R$ {{ "%.2f"|format(p.preco_custo) }}</td>
+                        <td class="d-none d-md-table-cell">
                             {% if p.preco_custo > 0 %}
                                 {% set margem = ((p.preco - p.preco_custo) / p.preco_custo * 100) %}
                                 <span class="small fw-semibold {{ 'text-success' if margem >= 0 else 'text-danger' }}">
@@ -70,9 +70,9 @@
                             <span class="fw-bold {{ 'text-danger' if p.quantidade <= p.estoque_minimo else 'text-success' }}">
                                 {{ p.quantidade }}
                             </span>
-                            <small class="text-muted">/ mín {{ p.estoque_minimo }}</small>
+                            <small class="text-muted d-none d-sm-inline">/ mín {{ p.estoque_minimo }}</small>
                         </td>
-                        <td>
+                        <td class="d-none d-sm-table-cell">
                             {% if p.quantidade == 0 %}
                                 <span class="badge bg-danger">Sem estoque</span>
                             {% elif p.quantidade <= p.estoque_minimo %}

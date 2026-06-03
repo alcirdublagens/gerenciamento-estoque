@@ -3,10 +3,24 @@
 {% block page_title %}Ponto de Venda{% endblock %}
 
 {% block content %}
-<div class="row g-3" style="height: calc(100vh - 130px);">
+
+<!-- Mobile tab switcher -->
+<div class="d-flex d-lg-none mb-3 rounded overflow-hidden border">
+    <button class="btn btn-primary flex-grow-1 fw-semibold rounded-0 py-2"
+            id="tabProdutosBtn" onclick="switchTab('produtos')">
+        <i class="bi bi-search me-1"></i> Produtos
+    </button>
+    <button class="btn btn-outline-primary flex-grow-1 fw-semibold rounded-0 py-2 position-relative"
+            id="tabCarrinhoBtn" onclick="switchTab('carrinho')">
+        <i class="bi bi-cart3 me-1"></i> Carrinho
+        <span id="tabCartBadge" class="badge bg-danger ms-1" style="display:none;font-size:.65rem;"></span>
+    </button>
+</div>
+
+<div class="row g-3" id="pdvRow" style="height: calc(100vh - 130px);">
 
     <!-- Painel de Produtos -->
-    <div class="col-lg-7 d-flex flex-column" style="min-height:0;">
+    <div class="col-lg-7 d-flex flex-column pdv-panel" id="panelProdutos" style="min-height:0;">
         <div class="card border-0 shadow-sm d-flex flex-column flex-grow-1" style="min-height:0;">
             <div class="card-header bg-white border-bottom py-3">
                 <input type="text" id="buscaProduto" class="form-control"
@@ -22,7 +36,7 @@
     </div>
 
     <!-- Painel do Carrinho -->
-    <div class="col-lg-5 d-flex flex-column" style="min-height:0;">
+    <div class="col-lg-5 d-flex flex-column pdv-panel" id="panelCarrinho" style="min-height:0;">
         <div class="card border-0 shadow-sm d-flex flex-column flex-grow-1" style="min-height:0;">
 
             <!-- Header Carrinho -->
@@ -300,14 +314,17 @@ function renderCarrinho() {
     const btnFinalizar = document.getElementById('btnFinalizar');
     const qtdBadge = document.getElementById('qtdItens');
 
+    const tabBadge = document.getElementById('tabCartBadge');
     if (!carrinho.size) {
         vazio.style.display = 'block';
         itensEl.innerHTML = '';
         document.getElementById('totalCarrinho').textContent = 'R$ 0,00';
         btnFinalizar.disabled = true;
         qtdBadge.style.display = 'none';
+        if (tabBadge) tabBadge.style.display = 'none';
         return;
     }
+    if (tabBadge) { tabBadge.textContent = carrinho.size; tabBadge.style.display = ''; }
 
     vazio.style.display = 'none';
     btnFinalizar.disabled = false;
@@ -406,8 +423,32 @@ function fmtBrl(v) { return v.toFixed(2).replace('.', ','); }
 function escHtml(str) {
     return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
+
+// ── Mobile tabs ───────────────────────────────────────────
+function switchTab(tab) {
+    document.getElementById('panelProdutos').classList.toggle('mobile-active', tab === 'produtos');
+    document.getElementById('panelCarrinho').classList.toggle('mobile-active', tab === 'carrinho');
+    var isProd = tab === 'produtos';
+    document.getElementById('tabProdutosBtn').className =
+        'btn flex-grow-1 fw-semibold rounded-0 py-2 ' + (isProd ? 'btn-primary' : 'btn-outline-primary');
+    document.getElementById('tabCarrinhoBtn').className =
+        'btn flex-grow-1 fw-semibold rounded-0 py-2 position-relative ' + (!isProd ? 'btn-primary' : 'btn-outline-primary');
+}
+if (window.innerWidth < 992) switchTab('produtos');
+window.addEventListener('resize', function() {
+    if (window.innerWidth >= 992) {
+        document.querySelectorAll('.pdv-panel').forEach(function(el){ el.classList.remove('mobile-active'); });
+    } else if (!document.querySelector('.pdv-panel.mobile-active')) {
+        switchTab('produtos');
+    }
+});
 </script>
 <style>
 .item-produto:hover { background: #f8f9fa; }
+@media (max-width: 991.98px) {
+    #pdvRow { height: auto !important; }
+    .pdv-panel { display: none !important; }
+    .pdv-panel.mobile-active { display: flex !important; flex-direction: column; min-height: calc(100vh - 195px); }
+}
 </style>
 {% endblock %}

@@ -189,8 +189,8 @@
                             <tr>
                                 <th class="ps-3">#</th>
                                 <th>Cliente</th>
-                                <th>Vendedor</th>
-                                <th>Pagamento</th>
+                                <th class="d-none d-md-table-cell">Vendedor</th>
+                                <th class="d-none d-sm-table-cell">Pagamento</th>
                                 <th>Status</th>
                                 <th class="text-end pe-3">Total</th>
                             </tr>
@@ -200,8 +200,8 @@
                             <tr>
                                 <td class="ps-3 text-muted small">{{ venda.id }}</td>
                                 <td class="small">{{ venda.cliente.nome if venda.cliente else '—' }}</td>
-                                <td class="small">{{ venda.vendedor.nome }}</td>
-                                <td>
+                                <td class="small d-none d-md-table-cell">{{ venda.vendedor.nome }}</td>
+                                <td class="d-none d-sm-table-cell">
                                     {% if venda.tipo_pagamento == 'avista' %}
                                         <span class="badge bg-success bg-opacity-75">À Vista</span>
                                     {% elif venda.tipo_pagamento == 'aprazo' %}

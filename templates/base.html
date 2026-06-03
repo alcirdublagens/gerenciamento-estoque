@@ -98,6 +98,31 @@
             font-weight: 700;
             line-height: 1.2;
         }
+
+        /* ── Mobile sidebar ── */
+        #sidebarOverlay {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,.55);
+            z-index: 199;
+        }
+        #sidebarOverlay.show { display: block; }
+
+        @media (max-width: 991.98px) {
+            #sidebar {
+                position: fixed;
+                top: 0; left: 0;
+                height: 100%;
+                z-index: 200;
+                transform: translateX(-100%);
+                transition: transform .25s ease;
+                box-shadow: 4px 0 24px rgba(0,0,0,.25);
+            }
+            #sidebar.show { transform: translateX(0); }
+            .content-area { padding: 1rem .75rem; }
+            .topbar { padding: .65rem 1rem; }
+        }
     </style>
 </head>
 <body>
@@ -169,6 +194,10 @@
 
     <div id="main-content">
         <div class="topbar">
+            <button class="btn btn-sm btn-link text-secondary d-lg-none me-2 p-0 lh-1"
+                    id="btnToggleSidebar" aria-label="Menu">
+                <i class="bi bi-list" style="font-size:1.4rem;"></i>
+            </button>
             <h6 class="mb-0">{% block page_title %}{% endblock %}</h6>
             {% if notif_count > 0 %}
             <span class="ms-auto badge bg-danger">
@@ -193,7 +222,23 @@
         </div>
     </div>
 
+    <div id="sidebarOverlay"></div>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
     {% block scripts %}{% endblock %}
+    <script>
+    (function(){
+        var sidebar=document.getElementById('sidebar');
+        var overlay=document.getElementById('sidebarOverlay');
+        var btn=document.getElementById('btnToggleSidebar');
+        if(!btn)return;
+        function openSidebar(){sidebar.classList.add('show');overlay.classList.add('show');}
+        function closeSidebar(){sidebar.classList.remove('show');overlay.classList.remove('show');}
+        btn.addEventListener('click',function(){sidebar.classList.contains('show')?closeSidebar():openSidebar();});
+        overlay.addEventListener('click',closeSidebar);
+        sidebar.querySelectorAll('.nav-link').forEach(function(l){
+            l.addEventListener('click',function(){if(window.innerWidth<992)closeSidebar();});
+        });
+    })();
+    </script>
 </body>
 </html>

@@ -23,10 +23,10 @@
                 <thead class="table-light">
                     <tr>
                         <th class="ps-3">Nome</th>
-                        <th>Documento</th>
-                        <th>Telefone</th>
-                        <th>Email</th>
-                        <th>Cadastrado</th>
+                        <th class="d-none d-sm-table-cell">Documento</th>
+                        <th class="d-none d-md-table-cell">Telefone</th>
+                        <th class="d-none d-lg-table-cell">Email</th>
+                        <th class="d-none d-lg-table-cell">Cadastrado</th>
                         <th class="pe-3"></th>
                     </tr>
                 </thead>
@@ -34,10 +34,10 @@
                     {% for c in clientes %}
                     <tr>
                         <td class="ps-3 fw-semibold">{{ c.nome }}</td>
-                        <td class="text-muted small font-monospace">{{ c.identificacao or '—' }}</td>
-                        <td class="text-muted small">{{ c.telefone or '—' }}</td>
-                        <td class="text-muted small">{{ c.email or '—' }}</td>
-                        <td class="text-muted small">{{ c.criado_em.strftime('%d/%m/%Y') }}</td>
+                        <td class="text-muted small font-monospace d-none d-sm-table-cell">{{ c.identificacao or '—' }}</td>
+                        <td class="text-muted small d-none d-md-table-cell">{{ c.telefone or '—' }}</td>
+                        <td class="text-muted small d-none d-lg-table-cell">{{ c.email or '—' }}</td>
+                        <td class="text-muted small d-none d-lg-table-cell">{{ c.criado_em.strftime('%d/%m/%Y') }}</td>
                         <td class="text-end pe-3">
                             <a href="{{ url_for('clientes.editar', id=c.id) }}"
                                class="btn btn-sm btn-outline-primary me-1">
