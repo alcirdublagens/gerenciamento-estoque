@@ -2,7 +2,8 @@ from flask import Blueprint, render_template, redirect, url_for, flash, request
 from flask_login import login_required
 from models import db
 from models.produto import Produto
-from .utils import admin_required, log_action
+from services.logger import snapshot, log_criacao, log_atualizacao, log_exclusao
+from .utils import admin_required
 
 estoque_bp = Blueprint("estoque", __name__, url_prefix="/estoque")
 
@@ -54,8 +55,10 @@ def novo():
         )
         db.session.add(produto)
         try:
+            db.session.flush()
+            entrada = log_criacao("produto", produto)
+            db.session.add(entrada)
             db.session.commit()
-            log_action("Criou produto", nome)
             flash("Produto cadastrado com sucesso!", "success")
             return redirect(url_for("estoque.index"))
         except Exception:
@@ -77,6 +80,8 @@ def editar(id):
             flash("Nome é obrigatório.", "danger")
             return render_template("estoque/form.html", produto=produto)
 
+        antes = snapshot(produto)
+
         produto.nome = nome
         produto.descricao = request.form.get("descricao", "").strip()
         produto.codigo = request.form.get("codigo", "").strip() or None
@@ -86,9 +91,10 @@ def editar(id):
         produto.quantidade = int(request.form.get("quantidade", 0) or 0)
         produto.estoque_minimo = int(request.form.get("estoque_minimo", 5) or 5)
 
+        entrada = log_atualizacao("produto", antes, produto)
+        db.session.add(entrada)
         try:
             db.session.commit()
-            log_action("Editou produto", f"ID {id}: {nome}")
             flash("Produto atualizado com sucesso!", "success")
             return redirect(url_for("estoque.index"))
         except Exception:
@@ -103,8 +109,9 @@ def editar(id):
 @admin_required
 def excluir(id):
     produto = db.get_or_404(Produto, id)
+    entrada = log_exclusao("produto", produto)
     produto.ativo = False
+    db.session.add(entrada)
     db.session.commit()
-    log_action("Removeu produto", f"ID {id}: {produto.nome}")
     flash(f'Produto "{produto.nome}" removido.', "success")
     return redirect(url_for("estoque.index"))

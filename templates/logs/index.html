@@ -28,13 +28,13 @@
                         </td>
                         <td>
                             <span class="badge
-                                {% if 'Login' in l.acao or 'Logout' in l.acao %}bg-secondary
-                                {% elif 'Criou' in l.acao or 'Registrou' in l.acao %}bg-success
-                                {% elif 'Editou' in l.acao or 'pago' in l.acao %}bg-primary
-                                {% elif 'Removeu' in l.acao %}bg-danger
+                                {% if l.acao in ('login', 'logout') %}bg-secondary
+                                {% elif l.acao.startswith('criou_') or l.acao == 'registrou_venda' %}bg-success
+                                {% elif l.acao.startswith('editou_') or l.acao == 'marcou_venda_paga' %}bg-primary
+                                {% elif l.acao.startswith('excluiu_') %}bg-danger
                                 {% else %}bg-secondary{% endif %}
                                 bg-opacity-75">
-                                {{ l.acao }}
+                                {{ l.acao | replace('_', ' ') }}
                             </span>
                         </td>
                         <td class="text-muted small d-none d-md-table-cell">{{ l.detalhes or '—' }}</td>

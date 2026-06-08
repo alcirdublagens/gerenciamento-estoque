@@ -1,11 +1,11 @@
 from datetime import date as dt_date
-from flask import Blueprint, render_template, request, jsonify
+from flask import Blueprint, render_template, request, jsonify, redirect, url_for, flash
 from flask_login import login_required, current_user
 from models import db
 from models.produto import Produto
 from models.venda import Venda, ItemVenda
 from models.cliente import Cliente
-from .utils import log_action
+from services.logger import log_acao
 
 pdv_bp = Blueprint("pdv", __name__, url_prefix="/pdv")
 
@@ -131,19 +131,19 @@ def registrar_venda():
         ))
 
     venda.total = total
+    entrada = log_acao("registrou_venda", f"#{venda.id} — R$ {total:.2f} — {tipo_pagamento}")
+    db.session.add(entrada)
     db.session.commit()
-    log_action("Registrou venda", f"Venda #{venda.id} — Total: R$ {total:.2f} — {tipo_pagamento}")
     return jsonify({"sucesso": True, "venda_id": venda.id, "total": total})
 
 
 @pdv_bp.route("/venda/<int:id>/pagar", methods=["POST"])
 @login_required
 def marcar_pago(id):
-    from flask import redirect, url_for
     venda = db.get_or_404(Venda, id)
     venda.status_pagamento = "pago"
+    entrada = log_acao("marcou_venda_paga", f"#{id}")
+    db.session.add(entrada)
     db.session.commit()
-    log_action("Marcou venda como paga", f"Venda #{id}")
-    from flask import flash
     flash(f"Venda #{id} marcada como paga.", "success")
     return redirect(request.referrer or url_for("dashboard.index"))

@@ -2,7 +2,7 @@ from flask import Blueprint, render_template, redirect, url_for, flash, request,
 from flask_login import login_required
 from models import db
 from models.cliente import Cliente
-from .utils import log_action
+from services.logger import snapshot, log_criacao, log_atualizacao, log_exclusao
 
 clientes_bp = Blueprint("clientes", __name__, url_prefix="/clientes")
 
@@ -61,8 +61,10 @@ def novo():
             email=request.form.get("email", "").strip(),
         )
         db.session.add(cliente)
+        db.session.flush()
+        entrada = log_criacao("cliente", cliente)
+        db.session.add(entrada)
         db.session.commit()
-        log_action("Criou cliente", nome)
         flash("Cliente cadastrado com sucesso!", "success")
         return redirect(url_for("clientes.index"))
 
@@ -80,13 +82,17 @@ def editar(id):
             flash("Nome é obrigatório.", "danger")
             return render_template("clientes/form.html", cliente=cliente)
 
+        antes = snapshot(cliente)
+
         cliente.nome = nome
         cliente.identificacao = request.form.get("identificacao", "").strip()
         cliente.telefone = request.form.get("telefone", "").strip()
         cliente.endereco = request.form.get("endereco", "").strip()
         cliente.email = request.form.get("email", "").strip()
+
+        entrada = log_atualizacao("cliente", antes, cliente)
+        db.session.add(entrada)
         db.session.commit()
-        log_action("Editou cliente", f"ID {id}: {nome}")
         flash("Cliente atualizado!", "success")
         return redirect(url_for("clientes.index"))
 
@@ -97,8 +103,9 @@ def editar(id):
 @login_required
 def excluir(id):
     cliente = db.get_or_404(Cliente, id)
+    entrada = log_exclusao("cliente", cliente)
     cliente.ativo = False
+    db.session.add(entrada)
     db.session.commit()
-    log_action("Removeu cliente", f"ID {id}: {cliente.nome}")
     flash(f'Cliente "{cliente.nome}" removido.', "success")
     return redirect(url_for("clientes.index"))

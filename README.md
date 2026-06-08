@@ -1,31 +1,79 @@
-[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2Fvercel%2Fvercel%2Ftree%2Fmain%2Fexamples%2Fflask&demo-title=Flask%20API&demo-description=Use%20Flask%20API%20on%20Vercel%20with%20Serverless%20Functions%20using%20the%20Python%20Runtime.&demo-url=https%3A%2F%2Fvercel-plus-flask.vercel.app%2F&demo-image=https://assets.vercel.com/image/upload/v1669994600/random/python.png)
+# Gerenciamento de Estoque
 
-# Flask + Vercel
+Sistema de gerenciamento de estoque e PDV (ponto de venda) com controle de usuários, clientes, produtos, vendas e log de atividades.
 
-This example shows how to use Flask on Vercel with Serverless Functions using the [Python Runtime](https://vercel.com/docs/concepts/functions/serverless-functions/runtimes/python).
+## Stack
 
-## Demo
+| Camada | Tecnologia |
+|---|---|
+| Framework | Flask 3.x |
+| ORM | Flask-SQLAlchemy |
+| Auth | Flask-Login |
+| Banco local | SQLite (padrão) |
+| Banco produção | PostgreSQL (via `DATABASE_URL`) |
+| Servidor | Gunicorn |
 
-https://vercel-plus-flask.vercel.app/
-
-## How it Works
-
-This example uses the Web Server Gateway Interface (WSGI) with Flask to handle requests on Vercel with Serverless Functions.
-
-## Running Locally
+## Rodando localmente
 
 ```bash
-npm i -g vercel
+# Cria e ativa o ambiente virtual
 python -m venv .venv
-source .venv/bin/activate
-uv sync  # or alternatively pip install flask gunicorn
+.venv\Scripts\activate        # Windows
+source .venv/bin/activate     # Linux/Mac
+
+# Instala dependências
+pip install -e .
+# ou com uv:
+uv sync
+
+# Inicia o servidor
 gunicorn main:app
+# Aplicação disponível em http://localhost:8000
 ```
 
-Your Flask application is now available at `http://localhost:3000`.
+Ou diretamente com o Flask em modo desenvolvimento:
 
-## One-Click Deploy
+```bash
+flask --app main run --debug
+```
 
-Deploy the example using [Vercel](https://vercel.com?utm_source=github&utm_medium=readme&utm_campaign=vercel-examples):
+## Variáveis de ambiente
 
-[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2Fvercel%2Fvercel%2Ftree%2Fmain%2Fexamples%2Fflask&demo-title=Flask%20API&demo-description=Use%20Flask%20API%20on%20Vercel%20with%20Serverless%20Functions%20using%20the%20Python%20Runtime.&demo-url=https%3A%2F%2Fvercel-plus-flask.vercel.app%2F&demo-image=https://assets.vercel.com/image/upload/v1669994600/random/python.png)
+Crie um arquivo `.env` na raiz (opcional para desenvolvimento local):
+
+```env
+SECRET_KEY=sua-chave-secreta-aqui
+DATABASE_URL=postgresql://user:pass@localhost:5432/estoque
+```
+
+Sem `DATABASE_URL` o sistema usa SQLite (`instance/estoque.db`).
+
+## Credenciais padrão
+
+Na primeira execução o sistema cria automaticamente um admin:
+
+- **Email:** `admin@sistema.com`
+- **Senha:** `admin123`
+
+## Estrutura
+
+```
+gerenciamento-estoque/
+├── main.py              # Entry point + factory
+├── config.py            # Configuração
+├── models/              # Modelos SQLAlchemy
+├── endpoints/           # Blueprints Flask
+├── services/
+│   └── logger.py        # Logger funcional de ações
+├── templates/           # Templates Jinja2
+└── public/              # Assets estáticos
+```
+
+## Logger de atividades
+
+Toda ação de usuário é registrada em `logs` com diff do que mudou:
+
+- **Criação** — registra os campos do novo objeto
+- **Edição** — registra apenas os campos alterados (`de` → `para`)
+- **Exclusão** — registra o estado antes da remoção
+- **Login/Logout/Venda** — registra ação com contexto
