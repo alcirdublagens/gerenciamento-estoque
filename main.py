@@ -1,9 +1,11 @@
 import logging
 from datetime import date, timedelta
-from flask import Flask, redirect, url_for
+import click
+from flask import Flask, jsonify, redirect, request, url_for
 from flask_login import current_user
+from flask_wtf.csrf import CSRFError
 from config import Config
-from models import db, login_manager
+from models import csrf, db, login_manager, migrate
 import models.usuario   # noqa: F401
 import models.produto   # noqa: F401
 import models.venda     # noqa: F401
@@ -14,11 +16,14 @@ log = logging.getLogger(__name__)
 
 
 def create_app():
+    Config.validate()
     app = Flask(__name__, static_folder="public")
     app.config.from_object(Config)
 
     db.init_app(app)
     login_manager.init_app(app)
+    migrate.init_app(app, db)
+    csrf.init_app(app)
 
     from endpoints.auth import auth_bp
     from endpoints.dashboard import dashboard_bp
@@ -35,6 +40,29 @@ def create_app():
     app.register_blueprint(usuarios_bp)
     app.register_blueprint(clientes_bp)
     app.register_blueprint(logs_bp)
+
+    @app.before_request
+    def require_password_change():
+        allowed = {"auth.alterar_senha", "auth.logout", "static"}
+        if (
+            current_user.is_authenticated
+            and current_user.deve_trocar_senha
+            and request.endpoint not in allowed
+        ):
+            return redirect(url_for("auth.alterar_senha"))
+
+    @app.after_request
+    def add_security_headers(response):
+        response.headers.setdefault("X-Content-Type-Options", "nosniff")
+        response.headers.setdefault("X-Frame-Options", "DENY")
+        response.headers.setdefault("Referrer-Policy", "same-origin")
+        return response
+
+    @app.errorhandler(CSRFError)
+    def handle_csrf_error(error):
+        if request.is_json:
+            return jsonify({"erro": "Sessão expirada. Atualize a página e tente novamente."}), 400
+        return error.description, 400
 
     @app.context_processor
     def inject_notificacoes():
@@ -66,20 +94,34 @@ def create_app():
             return redirect(url_for("pdv.index"))
         return redirect(url_for("auth.login"))
 
-    with app.app_context():
-        db.create_all()
-        _seed_admin()
+    @app.cli.command("seed-admin")
+    def seed_admin_command():
+        created = _seed_admin(app)
+        click.echo("Administrador inicial criado." if created else "Administrador já existe.")
 
     return app
 
 
-def _seed_admin():
+def _seed_admin(app):
     from models.usuario import Usuario
-    if not Usuario.query.filter_by(email="admin@sistema.com").first():
-        admin = Usuario(nome="Administrador", email="admin@sistema.com", papel="admin")
-        admin.set_senha("admin123")
-        db.session.add(admin)
-        db.session.commit()
+    email = app.config["ADMIN_EMAIL"]
+    if Usuario.query.filter_by(email=email).first():
+        return False
+    senha = app.config["ADMIN_PASSWORD"]
+    if len(senha) < 12:
+        raise click.ClickException(
+            "ADMIN_PASSWORD deve possuir pelo menos 12 caracteres para criar o administrador."
+        )
+    admin = Usuario(
+        nome="Administrador",
+        email=email,
+        papel="admin",
+        deve_trocar_senha=True,
+    )
+    admin.set_senha(senha)
+    db.session.add(admin)
+    db.session.commit()
+    return True
 
 
 app = create_app()

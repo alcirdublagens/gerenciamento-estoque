@@ -1,4 +1,5 @@
 from datetime import date as dt_date
+from decimal import Decimal
 from flask import Blueprint, render_template, request, jsonify, redirect, url_for, flash
 from flask_login import login_required, current_user
 from models import db
@@ -6,6 +7,7 @@ from models.produto import Produto
 from models.venda import Venda, ItemVenda
 from models.cliente import Cliente
 from services.logger import log_acao
+from .utils import admin_required
 
 pdv_bp = Blueprint("pdv", __name__, url_prefix="/pdv")
 
@@ -36,7 +38,7 @@ def buscar_produtos():
             "nome": p.nome,
             "codigo": p.codigo or "",
             "tag": p.tag or "",
-            "preco": p.preco,
+            "preco": float(p.preco),
             "quantidade": p.quantidade,
         }
         for p in produtos
@@ -78,6 +80,9 @@ def registrar_venda():
     data_vencimento_str = data.get("data_vencimento")
     observacao = data.get("observacao", "")
 
+    if tipo_pagamento not in {"avista", "aprazo", "parcelado"}:
+        return jsonify({"erro": "Tipo de pagamento inválido."}), 400
+
     venc = None
     if data_vencimento_str:
         try:
@@ -90,12 +95,23 @@ def registrar_venda():
 
     status_pagamento = "pago" if tipo_pagamento == "avista" else "pendente"
 
+    try:
+        cliente_id = int(cliente_id) if cliente_id else None
+        num_parcelas = int(num_parcelas) if num_parcelas else None
+    except (TypeError, ValueError):
+        return jsonify({"erro": "Dados da venda inválidos."}), 400
+
+    if cliente_id and not db.session.get(Cliente, cliente_id):
+        return jsonify({"erro": "Cliente inválido."}), 400
+    if tipo_pagamento == "parcelado" and (not num_parcelas or num_parcelas < 2):
+        return jsonify({"erro": "Informe ao menos duas parcelas."}), 400
+
     venda = Venda(
         vendedor_id=current_user.id,
-        cliente_id=int(cliente_id) if cliente_id else None,
+        cliente_id=cliente_id,
         total=0,
         tipo_pagamento=tipo_pagamento,
-        num_parcelas=int(num_parcelas) if num_parcelas else None,
+        num_parcelas=num_parcelas,
         data_vencimento=venc,
         status_pagamento=status_pagamento,
         observacao=observacao,
@@ -103,14 +119,30 @@ def registrar_venda():
     db.session.add(venda)
     db.session.flush()
 
-    total = 0.0
+    total = Decimal("0.00")
+    produtos_processados = set()
     for item in itens:
-        produto = db.session.get(Produto, item.get("produto_id"))
+        try:
+            produto_id = int(item.get("produto_id"))
+            qtd = int(item.get("quantidade", 0))
+        except (TypeError, ValueError):
+            db.session.rollback()
+            return jsonify({"erro": "Item da venda inválido."}), 400
+
+        if produto_id in produtos_processados:
+            db.session.rollback()
+            return jsonify({"erro": "Produto duplicado no carrinho."}), 400
+        produtos_processados.add(produto_id)
+
+        produto = db.session.execute(
+            db.select(Produto)
+            .where(Produto.id == produto_id)
+            .with_for_update()
+        ).scalar_one_or_none()
         if not produto or not produto.ativo:
             db.session.rollback()
             return jsonify({"erro": "Produto inválido."}), 400
 
-        qtd = int(item.get("quantidade", 0))
         if qtd <= 0:
             db.session.rollback()
             return jsonify({"erro": f"Quantidade inválida para {produto.nome}."}), 400
@@ -127,18 +159,19 @@ def registrar_venda():
             produto_id=produto.id,
             quantidade=qtd,
             preco_unitario=produto.preco,
-            preco_custo_unitario=produto.preco_custo or 0.0,
+            preco_custo_unitario=produto.preco_custo or Decimal("0.00"),
         ))
 
     venda.total = total
     entrada = log_acao("registrou_venda", f"#{venda.id} — R$ {total:.2f} — {tipo_pagamento}")
     db.session.add(entrada)
     db.session.commit()
-    return jsonify({"sucesso": True, "venda_id": venda.id, "total": total})
+    return jsonify({"sucesso": True, "venda_id": venda.id, "total": float(total)})
 
 
 @pdv_bp.route("/venda/<int:id>/pagar", methods=["POST"])
 @login_required
+@admin_required
 def marcar_pago(id):
     venda = db.get_or_404(Venda, id)
     venda.status_pagamento = "pago"
@@ -146,4 +179,4 @@ def marcar_pago(id):
     db.session.add(entrada)
     db.session.commit()
     flash(f"Venda #{id} marcada como paga.", "success")
-    return redirect(request.referrer or url_for("dashboard.index"))
+    return redirect(url_for("dashboard.index"))

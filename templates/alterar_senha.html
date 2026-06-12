@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+{% block title %}Alterar Senha — All Import Store{% endblock %}
+{% block page_title %}Alterar Senha{% endblock %}
+{% block content %}
+
+<div class="row justify-content-center">
+    <div class="col-md-8 col-lg-5">
+        <div class="card border-0 shadow-sm">
+            <div class="card-body p-4">
+                {% if current_user.deve_trocar_senha %}
+                <div class="alert alert-warning small">
+                    Por segurança, troque a senha temporária antes de continuar.
+                </div>
+                {% endif %}
+
+                <form method="POST">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold small">Senha atual</label>
+                        <input type="password" name="senha_atual" class="form-control"
+                               required autocomplete="current-password">
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold small">Nova senha</label>
+                        <input type="password" name="nova_senha" class="form-control"
+                               required minlength="12" autocomplete="new-password">
+                        <div class="form-text">Use pelo menos 12 caracteres.</div>
+                    </div>
+
+                    <div class="mb-4">
+                        <label class="form-label fw-semibold small">Confirmar nova senha</label>
+                        <input type="password" name="confirmar_senha" class="form-control"
+                               required minlength="12" autocomplete="new-password">
+                    </div>
+
+                    <button type="submit" class="btn w-100 text-white fw-semibold"
+                            style="background:#6366f1;">
+                        Salvar nova senha
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}

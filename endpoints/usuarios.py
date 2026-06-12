@@ -22,7 +22,7 @@ def index():
 def novo():
     if request.method == "POST":
         nome = request.form.get("nome", "").strip()
-        email = request.form.get("email", "").strip()
+        email = request.form.get("email", "").strip().lower()
         senha = request.form.get("senha", "")
         papel = request.form.get("papel", "vendedor")
 
@@ -30,15 +30,24 @@ def novo():
             flash("Todos os campos são obrigatórios.", "danger")
             return render_template("usuarios/form.html", usuario=None)
 
-        if len(senha) < 6:
-            flash("A senha deve ter no mínimo 6 caracteres.", "danger")
+        if len(senha) < 12:
+            flash("A senha deve ter no mínimo 12 caracteres.", "danger")
+            return render_template("usuarios/form.html", usuario=None)
+
+        if papel not in {"admin", "vendedor"}:
+            flash("Perfil de acesso inválido.", "danger")
             return render_template("usuarios/form.html", usuario=None)
 
         if Usuario.query.filter_by(email=email).first():
             flash("Email já cadastrado.", "danger")
             return render_template("usuarios/form.html", usuario=None)
 
-        usuario = Usuario(nome=nome, email=email, papel=papel)
+        usuario = Usuario(
+            nome=nome,
+            email=email,
+            papel=papel,
+            deve_trocar_senha=True,
+        )
         usuario.set_senha(senha)
         db.session.add(usuario)
         db.session.flush()
@@ -60,14 +69,24 @@ def editar(id):
     if request.method == "POST":
         antes = snapshot(usuario)
 
-        usuario.nome = request.form.get("nome", "").strip()
-        usuario.papel = request.form.get("papel", "vendedor")
+        nome = request.form.get("nome", "").strip()
+        papel = request.form.get("papel", "vendedor")
+        if not nome:
+            flash("Nome é obrigatório.", "danger")
+            return render_template("usuarios/form.html", usuario=usuario)
+        if papel not in {"admin", "vendedor"}:
+            flash("Perfil de acesso inválido.", "danger")
+            return render_template("usuarios/form.html", usuario=usuario)
+
+        usuario.nome = nome
+        usuario.papel = papel
         senha = request.form.get("senha", "")
         if senha:
-            if len(senha) < 6:
-                flash("A senha deve ter no mínimo 6 caracteres.", "danger")
+            if len(senha) < 12:
+                flash("A senha deve ter no mínimo 12 caracteres.", "danger")
                 return render_template("usuarios/form.html", usuario=usuario)
             usuario.set_senha(senha)
+            usuario.deve_trocar_senha = True
 
         entrada = log_atualizacao("usuario", antes, usuario)
         db.session.add(entrada)

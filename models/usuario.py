@@ -13,6 +13,7 @@ class Usuario(UserMixin, db.Model):
     senha_hash = db.Column(db.String(256), nullable=False)
     papel = db.Column(db.String(20), nullable=False, default="vendedor")
     ativo = db.Column(db.Boolean, default=True)
+    deve_trocar_senha = db.Column(db.Boolean, nullable=False, default=True)
     criado_em = db.Column(db.DateTime, default=datetime.utcnow)
 
     vendas = db.relationship("Venda", backref="vendedor", lazy=True)
@@ -30,4 +31,5 @@ class Usuario(UserMixin, db.Model):
 
 @login_manager.user_loader
 def load_user(user_id):
-    return db.session.get(Usuario, int(user_id))
+    usuario = db.session.get(Usuario, int(user_id))
+    return usuario if usuario and usuario.ativo else None

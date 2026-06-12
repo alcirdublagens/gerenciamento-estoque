@@ -1,6 +1,7 @@
 from flask import Blueprint, render_template
 from flask_login import login_required
 from sqlalchemy import func
+from decimal import Decimal
 from models import db
 from models.usuario import Usuario
 from models.produto import Produto
@@ -20,11 +21,14 @@ def index():
     trinta_dias = hoje - timedelta(days=30)
 
     vendas_hoje = Venda.query.filter(func.date(Venda.criado_em) == hoje).all()
-    total_hoje = sum(v.total for v in vendas_hoje)
+    total_hoje = sum((v.total for v in vendas_hoje), Decimal("0.00"))
 
     custo_hoje = db.session.query(
-        func.coalesce(func.sum(ItemVenda.preco_custo_unitario * ItemVenda.quantidade), 0.0)
-    ).join(Venda).filter(func.date(Venda.criado_em) == hoje).scalar() or 0.0
+        func.coalesce(
+            func.sum(ItemVenda.preco_custo_unitario * ItemVenda.quantidade),
+            Decimal("0.00"),
+        )
+    ).join(Venda).filter(func.date(Venda.criado_em) == hoje).scalar()
 
     lucro_hoje = total_hoje - custo_hoje
 
@@ -45,7 +49,7 @@ def index():
     desempenho = db.session.query(
         Usuario,
         func.count(Venda.id).label("qtd"),
-        func.coalesce(func.sum(Venda.total), 0.0).label("total"),
+        func.coalesce(func.sum(Venda.total), Decimal("0.00")).label("total"),
     ).join(Venda, Venda.vendedor_id == Usuario.id).filter(
         Venda.criado_em >= trinta_dias
     ).group_by(Usuario.id).order_by(func.sum(Venda.total).desc()).all()

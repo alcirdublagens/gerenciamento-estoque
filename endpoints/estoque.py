@@ -1,3 +1,4 @@
+from decimal import Decimal, InvalidOperation
 from flask import Blueprint, render_template, redirect, url_for, flash, request
 from flask_login import login_required
 from models import db
@@ -6,6 +7,16 @@ from services.logger import snapshot, log_criacao, log_atualizacao, log_exclusao
 from .utils import admin_required
 
 estoque_bp = Blueprint("estoque", __name__, url_prefix="/estoque")
+
+
+def _decimal_nao_negativo(valor):
+    try:
+        numero = Decimal(valor or "0").quantize(Decimal("0.01"))
+    except (InvalidOperation, ValueError):
+        raise ValueError("Informe valores monetários válidos.")
+    if numero < 0:
+        raise ValueError("Valores monetários não podem ser negativos.")
+    return numero
 
 
 @estoque_bp.route("/")
@@ -42,16 +53,27 @@ def novo():
             flash("Nome é obrigatório.", "danger")
             return render_template("estoque/form.html", produto=None)
 
+        try:
+            preco = _decimal_nao_negativo(request.form.get("preco"))
+            preco_custo = _decimal_nao_negativo(request.form.get("preco_custo"))
+            quantidade = int(request.form.get("quantidade", 0) or 0)
+            estoque_minimo = int(request.form.get("estoque_minimo", 5) or 5)
+            if quantidade < 0 or estoque_minimo < 0:
+                raise ValueError("Quantidades não podem ser negativas.")
+        except ValueError as error:
+            flash(str(error), "danger")
+            return render_template("estoque/form.html", produto=None)
+
         codigo = request.form.get("codigo", "").strip() or None
         produto = Produto(
             nome=nome,
             descricao=request.form.get("descricao", "").strip(),
             codigo=codigo,
             tag=request.form.get("tag", "").strip() or None,
-            preco=float(request.form.get("preco", 0) or 0),
-            preco_custo=float(request.form.get("preco_custo", 0) or 0),
-            quantidade=int(request.form.get("quantidade", 0) or 0),
-            estoque_minimo=int(request.form.get("estoque_minimo", 5) or 5),
+            preco=preco,
+            preco_custo=preco_custo,
+            quantidade=quantidade,
+            estoque_minimo=estoque_minimo,
         )
         db.session.add(produto)
         try:
@@ -82,14 +104,25 @@ def editar(id):
 
         antes = snapshot(produto)
 
+        try:
+            preco = _decimal_nao_negativo(request.form.get("preco"))
+            preco_custo = _decimal_nao_negativo(request.form.get("preco_custo"))
+            quantidade = int(request.form.get("quantidade", 0) or 0)
+            estoque_minimo = int(request.form.get("estoque_minimo", 5) or 5)
+            if quantidade < 0 or estoque_minimo < 0:
+                raise ValueError("Quantidades não podem ser negativas.")
+        except ValueError as error:
+            flash(str(error), "danger")
+            return render_template("estoque/form.html", produto=produto)
+
         produto.nome = nome
         produto.descricao = request.form.get("descricao", "").strip()
         produto.codigo = request.form.get("codigo", "").strip() or None
         produto.tag = request.form.get("tag", "").strip() or None
-        produto.preco = float(request.form.get("preco", 0) or 0)
-        produto.preco_custo = float(request.form.get("preco_custo", 0) or 0)
-        produto.quantidade = int(request.form.get("quantidade", 0) or 0)
-        produto.estoque_minimo = int(request.form.get("estoque_minimo", 5) or 5)
+        produto.preco = preco
+        produto.preco_custo = preco_custo
+        produto.quantidade = quantidade
+        produto.estoque_minimo = estoque_minimo
 
         entrada = log_atualizacao("produto", antes, produto)
         db.session.add(entrada)

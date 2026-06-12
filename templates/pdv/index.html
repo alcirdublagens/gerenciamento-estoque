@@ -159,6 +159,7 @@
 
 {% block scripts %}
 <script>
+const csrfToken = document.querySelector('meta[name="csrf-token"]').content;
 const carrinho = new Map();
 let debounce, debounceCliente;
 let clienteId = null;
@@ -397,7 +398,10 @@ async function finalizarVenda() {
     try {
         const res = await fetch('/pdv/venda', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': csrfToken,
+            },
             body: JSON.stringify(payload),
         });
         const data = await res.json();

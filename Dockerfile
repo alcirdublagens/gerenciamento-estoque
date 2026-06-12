@@ -12,6 +12,8 @@ RUN python -m pip install --upgrade pip \
 
 COPY . .
 
+RUN chmod +x /app/docker-entrypoint.sh
+
 EXPOSE 8000
 
-CMD ["gunicorn", "--bind", "0.0.0.0:8000", "--workers", "1", "--timeout", "120", "main:app"]
+CMD ["/app/docker-entrypoint.sh"]

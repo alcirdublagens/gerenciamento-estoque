@@ -1,0 +1,3 @@
+Banco de dados versionado com Flask-Migrate/Alembic.
+
+O container executa `flask --app main db upgrade` antes de iniciar a aplicação.

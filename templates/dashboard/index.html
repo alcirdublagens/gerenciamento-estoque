@@ -82,6 +82,7 @@
                     <td class="small text-danger">{{ v.data_vencimento.strftime('%d/%m/%Y') }}</td>
                     <td>
                         <form method="POST" action="{{ url_for('pdv.marcar_pago', id=v.id) }}" class="d-inline">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                             <button class="btn btn-xs btn-outline-success" style="font-size:.7rem;padding:.2rem .5rem;">
                                 <i class="bi bi-check2"></i> Pago
                             </button>

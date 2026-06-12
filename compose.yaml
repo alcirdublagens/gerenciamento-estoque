@@ -31,6 +31,9 @@ services:
         condition: service_healthy
     environment:
       SECRET_KEY: ${SECRET_KEY:?Configure SECRET_KEY no arquivo .env}
+      ADMIN_EMAIL: ${ADMIN_EMAIL:?Configure ADMIN_EMAIL no arquivo .env}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:?Configure ADMIN_PASSWORD no arquivo .env}
+      ENFORCE_SECURE_CONFIG: "true"
       DB_HOST: db
       DB_PORT: 5432
       DB_NAME: ${POSTGRES_DB}
