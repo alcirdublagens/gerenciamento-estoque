@@ -35,6 +35,10 @@ locais dentro do projeto.
 ### Requisitos
 
 - Docker Engine com o plugin Docker Compose, ou Docker Desktop.
+- Acesso à internet na primeira construção para baixar as imagens e dependências.
+
+Depois que as imagens forem construídas, a interface não depende de CDN:
+Bootstrap e Bootstrap Icons estão incluídos no projeto.
 
 ### Passo 1: criar o arquivo de configuração
 
@@ -53,31 +57,44 @@ Edite o `.env` antes de iniciar o sistema:
 APP_PORT=8000
 SECRET_KEY=troque-por-uma-chave-longa-e-aleatoria
 
+ADMIN_EMAIL=admin@sistema.com
+ADMIN_PASSWORD=troque-por-uma-senha-temporaria-com-12-caracteres
+
 POSTGRES_DB=estoque
 POSTGRES_USER=estoque
 POSTGRES_PASSWORD=troque-por-uma-senha-forte
 POSTGRES_PORT=5432
 
+BACKUP_INTERVAL_HOURS=24
+BACKUP_RETENTION_DAYS=30
+
 DATABASE_URL=
 ```
 
-Troque, no mínimo, `SECRET_KEY` e `POSTGRES_PASSWORD`. Uma `SECRET_KEY` pode ser
-gerada com:
+Troque obrigatoriamente `SECRET_KEY`, `ADMIN_PASSWORD` e `POSTGRES_PASSWORD`.
+Gere valores aleatórios, diferentes entre si:
 
 ```bash
 python -c "import secrets; print(secrets.token_hex(32))"
 ```
+
+Execute o comando novamente para cada segredo. Uma saída hexadecimal longa é
+adequada e evita problemas de interpretação no arquivo `.env`.
 
 Variáveis disponíveis:
 
 | Variável | Obrigatória | Exemplo | Descrição |
 |---|---|---|---|
 | `APP_PORT` | Não | `8000` | Porta usada para acessar o sistema |
-| `SECRET_KEY` | Sim | valor aleatório | Chave de assinatura das sessões |
+| `SECRET_KEY` | Sim | 64 caracteres aleatórios | Chave de assinatura das sessões |
+| `ADMIN_EMAIL` | Sim | `admin@sistema.com` | Login do primeiro administrador |
+| `ADMIN_PASSWORD` | Sim | senha temporária | Senha inicial com no mínimo 12 caracteres |
 | `POSTGRES_DB` | Sim | `estoque` | Nome do banco PostgreSQL |
 | `POSTGRES_USER` | Sim | `estoque` | Usuário do PostgreSQL |
 | `POSTGRES_PASSWORD` | Sim | senha forte | Senha do PostgreSQL |
 | `POSTGRES_PORT` | Não | `5432` | Porta local do PostgreSQL |
+| `BACKUP_INTERVAL_HOURS` | Não | `24` | Intervalo entre backups automáticos |
+| `BACKUP_RETENTION_DAYS` | Não | `30` | Retenção dos backups automáticos |
 | `DATABASE_URL` | Não | vazio | Alternativa para execução sem Docker |
 
 No uso com Docker, mantenha `DATABASE_URL` vazia. Ela não é necessária para a
@@ -87,10 +104,17 @@ Se a porta `8000` já estiver ocupada, altere `APP_PORT`. Se a porta `5432`
 estiver ocupada, altere `POSTGRES_PORT`. Essas mudanças afetam apenas as portas
 do computador; não alteram as portas internas dos containers.
 
-Defina `POSTGRES_DB`, `POSTGRES_USER` e `POSTGRES_PASSWORD` antes da primeira
-inicialização. A imagem do PostgreSQL usa esses valores apenas para criar um
-banco novo. Alterá-los depois que `data/postgres/` já possui dados não renomeia
-o banco nem troca automaticamente as credenciais existentes.
+Defina as credenciais antes da primeira inicialização:
+
+- O PostgreSQL usa `POSTGRES_DB`, `POSTGRES_USER` e `POSTGRES_PASSWORD` somente
+  quando cria `data/postgres/` pela primeira vez.
+- A aplicação usa `ADMIN_EMAIL` e `ADMIN_PASSWORD` somente para criar o primeiro
+  administrador. Reiniciar o container não redefine sua senha.
+- Mantenha o `.env` protegido e fora de compartilhamentos públicos. Ele não é
+  versionado pelo Git.
+
+Alterar essas variáveis depois que os dados existem não renomeia o banco, não
+troca automaticamente suas credenciais e não redefine o administrador.
 
 ### Como a conexão com o banco é definida
 
@@ -175,9 +199,16 @@ Confira o estado dos containers:
 docker compose ps
 ```
 
-O Compose aguarda o healthcheck do PostgreSQL antes de iniciar a aplicação. Na
-primeira execução, também cria automaticamente as tabelas e o usuário
-administrador.
+O Compose aguarda o healthcheck do PostgreSQL. Antes de iniciar o Gunicorn, o
+container da aplicação:
+
+1. Executa `flask --app main db upgrade`.
+2. Aplica todas as migrations pendentes.
+3. Cria o administrador inicial somente se o email ainda não existir.
+4. Inicia a aplicação.
+
+O Compose rejeita os textos de exemplo, `SECRET_KEY` com menos de 32 caracteres
+e senhas com menos de 12 caracteres.
 
 ### Passo 3: acessar a aplicação
 
@@ -187,14 +218,31 @@ Com `APP_PORT=8000`, acesse:
 http://localhost:8000
 ```
 
-Use as credenciais iniciais:
+Use os valores configurados no `.env`:
 
 ```text
-Email: admin@sistema.com
-Senha: admin123
+Email: valor de ADMIN_EMAIL
+Senha: valor de ADMIN_PASSWORD
 ```
 
-Troque a senha após o primeiro acesso.
+O primeiro administrador e todos os usuários criados com senha temporária são
+obrigados a definir uma nova senha no primeiro acesso. A nova senha deve possuir
+ao menos 12 caracteres.
+
+### Proteções aplicadas
+
+- Aplicação e PostgreSQL publicados somente em `127.0.0.1`.
+- Senhas iniciais definidas pelo instalador, sem credencial fixa no código.
+- Troca obrigatória das senhas temporárias.
+- Proteção CSRF em formulários e requisições JSON.
+- Cookies de sessão `HttpOnly` e `SameSite=Lax`.
+- Logout apenas por requisição POST.
+- Redirecionamentos externos após login são rejeitados.
+- Valores monetários armazenados como decimal.
+- Restrições de banco impedem valores e estoques negativos.
+- A baixa de estoque bloqueia o produto durante a transação da venda.
+- Migrations aplicadas automaticamente antes da inicialização.
+- Backup automático com retenção configurável.
 
 ### Passo 4: verificar ou diagnosticar
 
@@ -208,6 +256,12 @@ Para visualizar também os logs do PostgreSQL:
 
 ```bash
 docker compose logs -f db
+```
+
+Para verificar o serviço de backup:
+
+```bash
+docker compose logs -f backup
 ```
 
 Se algum serviço não aparecer como iniciado ou saudável, execute:
@@ -240,15 +294,25 @@ O Compose usa bind mounts para manter os dados fora dos containers:
 |---|---|
 | `data/postgres/` | Arquivos do banco PostgreSQL |
 | `data/app/` | Arquivos persistentes da aplicação |
-| `data/backups/` | Local recomendado para backups manuais |
+| `data/backups/` | Backups automáticos e manuais |
 
 Essas pastas são ignoradas pelo Git. Recriar ou atualizar os containers não
 remove seu conteúdo. Para migrar a instalação, copie o projeto com a pasta
 `data/` e o arquivo `.env`, mantendo-os protegidos.
 
-### Backup e restauração
+### Backup automático
 
-Crie a pasta e gere um backup:
+O serviço `backup` cria um arquivo no formato customizado do PostgreSQL assim
+que a aplicação fica saudável e repete a operação conforme
+`BACKUP_INTERVAL_HOURS`. Arquivos com mais de `BACKUP_RETENTION_DAYS` são
+removidos automaticamente.
+
+Confirme periodicamente que `data/backups/` contém arquivos `.dump` recentes.
+Um backup só é confiável depois que sua restauração foi testada.
+
+### Backup manual e restauração
+
+Para gerar um backup adicional:
 
 ```bash
 mkdir -p data/backups
@@ -260,14 +324,27 @@ docker compose exec -T db sh -c \
 Para restaurar um backup, pare a aplicação durante a operação:
 
 ```bash
-docker compose stop app
+docker compose stop app backup
 docker compose exec -T db sh -c \
   'pg_restore --clean --if-exists -U "$POSTGRES_USER" -d "$POSTGRES_DB"' \
   < data/backups/estoque.dump
-docker compose start app
+docker compose start app backup
 ```
 
 A restauração substitui os objetos existentes no banco selecionado.
+
+### Atualização da aplicação
+
+Antes de atualizar:
+
+1. Confirme a existência de um backup recente.
+2. Pare os serviços com `docker compose down`.
+3. Atualize os arquivos do projeto.
+4. Execute `docker compose up -d --build`.
+5. Confira `docker compose ps` e `docker compose logs app`.
+
+As migrations são aplicadas automaticamente. Não apague `data/postgres/` para
+atualizar o sistema.
 
 ## Execução sem Docker
 
@@ -300,7 +377,23 @@ Alternativamente, com `uv`:
 uv sync
 ```
 
-Para desenvolvimento:
+Configure ao menos as variáveis necessárias para criar o administrador:
+
+```env
+SECRET_KEY=uma-chave-local
+ADMIN_EMAIL=admin@sistema.com
+ADMIN_PASSWORD=uma-senha-temporaria-com-12-caracteres
+DATABASE_URL=
+```
+
+Prepare o banco e crie o administrador:
+
+```bash
+flask --app main db upgrade
+flask --app main seed-admin
+```
+
+Depois, para desenvolvimento:
 
 ```bash
 flask --app main run --debug
@@ -321,6 +414,8 @@ Nesse caso, o endereço padrão é `http://127.0.0.1:8000`.
 | Variável | Obrigatória | Padrão | Descrição |
 |---|---|---|---|
 | `SECRET_KEY` | Em produção | `dev-secret-key-mude-em-producao` | Assina a sessão do Flask |
+| `ADMIN_EMAIL` | Para o primeiro acesso | `admin@sistema.com` | Email do administrador inicial |
+| `ADMIN_PASSWORD` | Para o primeiro acesso | vazio | Senha temporária do administrador |
 | `DATABASE_URL` | Não | SQLite local | URL de conexão do SQLAlchemy |
 
 O `python-dotenv` carrega automaticamente as variáveis de um arquivo `.env`.
@@ -329,13 +424,8 @@ Sem `DATABASE_URL`, a execução fora do Docker usa SQLite em
 
 ## Primeiro acesso
 
-Na primeira inicialização é criado automaticamente:
-
-- Email: `admin@sistema.com`
-- Senha: `admin123`
-
-Troque essa senha antes de disponibilizar o sistema. O valor padrão da
-`SECRET_KEY` também é apenas para desenvolvimento.
+O primeiro administrador é criado com `ADMIN_EMAIL` e `ADMIN_PASSWORD`. A senha
+é temporária e deve ser trocada no primeiro login.
 
 ## Estrutura
 
@@ -347,9 +437,11 @@ gerenciamento-estoque/
 ├── endpoints/           # Blueprints e regras das telas
 ├── services/
 │   └── logger.py        # Geração dos registros de auditoria
+├── migrations/          # Evolução versionada do banco de dados
 ├── templates/           # Templates Jinja2
 ├── public/              # Arquivos estáticos
 ├── Dockerfile           # Imagem da aplicação
+├── docker-entrypoint.sh # Migrations e inicialização
 ├── compose.yaml         # Aplicação e PostgreSQL
 ├── .env.example         # Exemplo de configuração
 ├── pyproject.toml       # Metadados e dependências
@@ -359,5 +451,8 @@ gerenciamento-estoque/
 ## Pontos de atenção
 
 - Não há testes automatizados no repositório.
-- O administrador e a chave de sessão possuem valores padrão conhecidos e
-  precisam ser alterados em qualquer implantação real.
+- Não compartilhe `.env`, `data/postgres/` ou `data/backups/` publicamente.
+- Não use `docker compose down -v` nem apague a pasta `data/` durante uma
+  atualização.
+- Verifique os backups e faça um teste de restauração antes de depender do
+  sistema para operação diária.
