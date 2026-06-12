@@ -15,6 +15,9 @@ instance/
 *.db
 *.sqlite3
 
+# Dados persistidos pelo Docker
+data/
+
 # Variáveis de ambiente
 .env
 
